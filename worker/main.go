@@ -3,8 +3,10 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
-	"os/exec"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // A Worker executes operations.
@@ -21,7 +23,7 @@ type Host struct {
 // Operation is an interface representing a generic operation.
 type Operation interface {
 	Desc() string
-	Script() []string
+	Script() string
 }
 
 // OperationResult represents the result of an Operation.
@@ -43,8 +45,8 @@ func (o *FileExistsOperation) Desc() string {
 }
 
 // Script returns the operation's script which can then be executed on remote hosts.
-func (o *FileExistsOperation) Script() []string {
-	return []string{"[", "-f", o.Path, "]"}
+func (o *FileExistsOperation) Script() string {
+	return fmt.Sprintf("[ -f %s ]", o.Path)
 }
 
 // FileContainsOperation ensures the file at Path contains the text Text.
@@ -60,25 +62,39 @@ func (o *FileContainsOperation) Desc() string {
 }
 
 // Script returns the operation's script which can then be executed on remote hosts.
-func (o *FileContainsOperation) Script() []string {
-	return []string{"grep", "-q", o.Text, o.Path}
+func (o *FileContainsOperation) Script() string {
+	return fmt.Sprintf("grep -q %s %s", o.Text, o.Path)
 }
 
 // Execute executes an operation.
 func (w *Worker) Execute(h Host, o Operation) (*OperationResult, error) {
-	log.Printf("Executing operation %s", o.Desc())
+	log.Printf("Executing operation %s on host %s", o.Desc(), h.Hostname)
 
-	script := o.Script()
-	sshCmd := append([]string{"-i", h.KeyPath, fmt.Sprintf("%s@%s", h.User, h.Hostname)}, script...)
-	cmd := exec.Command("ssh", sshCmd...)
+	config := &ssh.ClientConfig{
+		User: h.User,
+		Auth: []ssh.AuthMethod{PublicKeyFile(h.KeyPath)},
+		// The following line prevents the need to manually approve each remote host as a known
+		// host. This, however, poses a security risk and a better mechanism should probably be
+		// used in production.
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", h.Hostname), config)
+	if err != nil {
+		log.Fatal("Failed to dial: ", err)
+	}
+	session, err := client.NewSession()
+	if err != nil {
+		log.Fatal("Failed to create session: ", err)
+	}
+	defer session.Close()
 
 	var stdOut, stdErr bytes.Buffer
+	session.Stdout = &stdOut
+	session.Stderr = &stdErr
 
-	cmd.Stdout = &stdOut
-	cmd.Stderr = &stdErr
+	script := o.Script()
 
-	err := cmd.Run()
-
+	err = session.Run(script)
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +105,20 @@ func (w *Worker) Execute(h Host, o Operation) (*OperationResult, error) {
 	}
 
 	return &r, nil
+}
+
+// PublicKeyFile reads a private SSH key from a file and returns an ssh.AuthMethod.
+func PublicKeyFile(file string) ssh.AuthMethod {
+	buffer, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil
+	}
+
+	key, err := ssh.ParsePrivateKey(buffer)
+	if err != nil {
+		return nil
+	}
+	return ssh.PublicKeys(key)
 }
 
 func main() {
