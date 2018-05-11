@@ -78,7 +78,7 @@ fi`
 
 // Execute executes one or more Operations on a remote host. The function sends back
 // OperationResults and errors.
-func (w *Worker) Execute(h Host, operations []Operation) (chan *OperationResult, chan error, chan bool) {
+func (w *Worker) Execute(c *ssh.Client, h Host, operations []Operation) (chan *OperationResult, chan error, chan bool) {
 	log.Printf("Executing %d operation(s) on host %s", len(operations), h.Hostname)
 
 	resChan := make(chan *OperationResult)
@@ -86,27 +86,12 @@ func (w *Worker) Execute(h Host, operations []Operation) (chan *OperationResult,
 	done := make(chan bool)
 
 	go func() {
-		// Initialize SSH connection to remote host
-		config := &ssh.ClientConfig{
-			User: h.User,
-			Auth: []ssh.AuthMethod{PublicKeyFile(h.KeyPath)},
-			// The following line prevents the need to manually approve each remote host as a known
-			// host. This, however, poses a security risk and a better mechanism should probably be
-			// used in production.
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		}
-		client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", h.Hostname), config)
-		if err != nil {
-			errChan <- fmt.Errorf("failed to dial: %v", err)
-		}
-
-		// Execute operations
 		for _, o := range operations {
 			log.Printf("[%s] Executing operation %s", h.Hostname, o.Desc())
 			// Initialize session (this needs to be done per operation).
 			// TODO Execute each operation in a separate function so that defer runs immediately
 			// at the end of an operation.
-			session, err := client.NewSession()
+			session, err := c.NewSession()
 			if err != nil {
 				errChan <- fmt.Errorf("failed to create session: %v", err)
 			}
@@ -181,12 +166,26 @@ func main() {
 		Text:        "hello",
 	}
 
-	res, err, done := w.Execute(h, []Operation{&feo, &fco})
+	// Initialize SSH connection to remote host
+	config := &ssh.ClientConfig{
+		User: h.User,
+		Auth: []ssh.AuthMethod{PublicKeyFile(h.KeyPath)},
+		// The following line prevents the need to manually approve each remote host as a known
+		// host. This, however, poses a security risk and a better mechanism should probably be
+		// used in production.
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", h.Hostname), config)
+	if err != nil {
+		log.Fatalf("failed to dial: %v", err)
+	}
+
+	res, errChan, done := w.Execute(client, h, []Operation{&feo, &fco})
 	for {
 		select {
 		case r := <-res:
 			log.Printf("Operation returned exit code %d", r.ExitCode)
-		case e := <-err:
+		case e := <-errChan:
 			log.Printf("Operation returned an error: %v", e)
 		case <-done:
 			log.Println("Done")
