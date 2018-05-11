@@ -66,45 +66,67 @@ func (o *FileContainsOperation) Script() string {
 	return fmt.Sprintf("grep -q %s %s", o.Text, o.Path)
 }
 
-// Execute executes an operation.
-func (w *Worker) Execute(h Host, o Operation) (*OperationResult, error) {
-	log.Printf("Executing operation %s on host %s", o.Desc(), h.Hostname)
+// Execute executes one or more Operations on a remote host. The function sends back
+// OperationResults and errors.
+func (w *Worker) Execute(h Host, operations []Operation) (chan *OperationResult, chan error, chan bool) {
+	log.Printf("Executing %d operation(s) on host %s", len(operations), h.Hostname)
 
-	config := &ssh.ClientConfig{
-		User: h.User,
-		Auth: []ssh.AuthMethod{PublicKeyFile(h.KeyPath)},
-		// The following line prevents the need to manually approve each remote host as a known
-		// host. This, however, poses a security risk and a better mechanism should probably be
-		// used in production.
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", h.Hostname), config)
-	if err != nil {
-		log.Fatal("Failed to dial: ", err)
-	}
-	session, err := client.NewSession()
-	if err != nil {
-		log.Fatal("Failed to create session: ", err)
-	}
-	defer session.Close()
+	resChan := make(chan *OperationResult)
+	errChan := make(chan error)
+	done := make(chan bool)
 
-	var stdOut, stdErr bytes.Buffer
-	session.Stdout = &stdOut
-	session.Stderr = &stdErr
+	go func() {
+		// Initialize SSH connection to remote host
+		config := &ssh.ClientConfig{
+			User: h.User,
+			Auth: []ssh.AuthMethod{PublicKeyFile(h.KeyPath)},
+			// The following line prevents the need to manually approve each remote host as a known
+			// host. This, however, poses a security risk and a better mechanism should probably be
+			// used in production.
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		}
+		client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", h.Hostname), config)
+		if err != nil {
+			errChan <- fmt.Errorf("failed to dial: %v", err)
+		}
 
-	script := o.Script()
+		// Execute operations
+		for _, o := range operations {
+			// Initialize session (this needs to be done per operation).
+			// TODO Execute each operation in a separate function so that defer runs immediately
+			// at the end of an operation.
+			session, err := client.NewSession()
+			if err != nil {
+				errChan <- fmt.Errorf("failed to create session: %v", err)
+			}
+			defer session.Close()
 
-	err = session.Run(script)
-	if err != nil {
-		return nil, err
-	}
+			var stdOut, stdErr bytes.Buffer
+			session.Stdout = &stdOut
+			session.Stderr = &stdErr
 
-	r := OperationResult{
-		StdOut: string(stdOut.Bytes()),
-		StdErr: string(stdErr.Bytes()),
-	}
+			script := o.Script()
 
-	return &r, nil
+			err = session.Run(script)
+			if err != nil {
+				// Remote command returned an error
+				// TODO Separate command errors from SSH errors
+				errChan <- err
+				continue
+			}
+
+			r := OperationResult{
+				StdOut: string(stdOut.Bytes()),
+				StdErr: string(stdErr.Bytes()),
+			}
+
+			resChan <- &r
+		}
+
+		done <- true
+	}()
+
+	return resChan, errChan, done
 }
 
 // PublicKeyFile reads a private SSH key from a file and returns an ssh.AuthMethod.
@@ -140,17 +162,16 @@ func main() {
 		Text:        "hello",
 	}
 
-	res, err := w.Execute(h, &feo)
-	if err != nil {
-		log.Fatalf("Error while executing operation: %s", err)
+	res, err, done := w.Execute(h, []Operation{&feo, &fco})
+	for {
+		select {
+		case r := <-res:
+			log.Printf("Operation returned exit code %d", r.ExitCode)
+		case e := <-err:
+			log.Printf("Operation returned an error: %v", e)
+		case <-done:
+			log.Println("Done")
+			return
+		}
 	}
-
-	log.Printf("Operation completed with exit code %d", res.ExitCode)
-
-	res, err = w.Execute(h, &fco)
-	if err != nil {
-		log.Fatalf("Error while executing operation: %s", err)
-	}
-
-	log.Printf("Operation completed with exit code %d", res.ExitCode)
 }
