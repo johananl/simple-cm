@@ -46,7 +46,12 @@ func (o *FileExistsOperation) Desc() string {
 
 // Script returns the operation's script which can then be executed on remote hosts.
 func (o *FileExistsOperation) Script() string {
-	return fmt.Sprintf("[ -f %s ]", o.Path)
+	s := `#!/bin/bash
+
+if [ ! -f %s ]; then
+	touch %s
+fi`
+	return fmt.Sprintf(s, o.Path, o.Path)
 }
 
 // FileContainsOperation ensures the file at Path contains the text Text.
@@ -63,7 +68,12 @@ func (o *FileContainsOperation) Desc() string {
 
 // Script returns the operation's script which can then be executed on remote hosts.
 func (o *FileContainsOperation) Script() string {
-	return fmt.Sprintf("grep -q %s %s", o.Text, o.Path)
+	s := `#!/bin/bash
+
+if ! grep -q %s %s; then
+	echo "%s" >> %s
+fi`
+	return fmt.Sprintf(s, o.Text, o.Path, o.Text, o.Path)
 }
 
 // Execute executes one or more Operations on a remote host. The function sends back
