@@ -78,6 +78,7 @@ fi`
 
 // Execute executes one or more Operations on a remote host. The function sends back
 // OperationResults and errors.
+// TODO Break this down and make this testable.
 func (w *Worker) Execute(c *ssh.Client, h Host, operations []Operation) (chan *OperationResult, chan error, chan bool) {
 	log.Printf("Executing %d operation(s) on host %s", len(operations), h.Hostname)
 
