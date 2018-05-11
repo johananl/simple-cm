@@ -102,6 +102,7 @@ func (w *Worker) Execute(h Host, operations []Operation) (chan *OperationResult,
 
 		// Execute operations
 		for _, o := range operations {
+			log.Printf("[%s] Executing operation %s", h.Hostname, o.Desc())
 			// Initialize session (this needs to be done per operation).
 			// TODO Execute each operation in a separate function so that defer runs immediately
 			// at the end of an operation.
@@ -117,6 +118,14 @@ func (w *Worker) Execute(h Host, operations []Operation) (chan *OperationResult,
 
 			script := o.Script()
 
+			log.Printf(
+				"[%s] Executing the following script:\n"+
+					"========================\n"+
+					"%s\n"+
+					"========================",
+				h.Hostname,
+				script,
+			)
 			err = session.Run(script)
 			if err != nil {
 				// Remote command returned an error
