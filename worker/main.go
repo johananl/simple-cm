@@ -29,9 +29,8 @@ type Operation interface {
 
 // OperationResult represents the result of an Operation.
 type OperationResult struct {
-	StdOut   string
-	StdErr   string
-	ExitCode int
+	StdOut string
+	StdErr string
 }
 
 // FileExistsOperation ensures the file at Path exists.
@@ -100,48 +99,25 @@ func (w *Worker) RunScript(sess *ssh.Session, script string) (*string, *string, 
 	return &stdOutStr, &stdErrStr, err
 }
 
-// Execute executes one or more Operations on a remote host. The function sends back
-// OperationResults and errors.
-// TODO Break this down and make this testable.
-func (w *Worker) Execute(c *ssh.Client, h Host, operations []Operation) (chan *OperationResult, chan error, chan bool) {
-	log.Printf("Executing %d operation(s) on host %s", len(operations), h.Hostname)
+// ExecuteOperation execute one Operation on a remote host. The function sends back OperationResults or an
+// error.
+func (w *Worker) ExecuteOperation(c *ssh.Client, h Host, o Operation) (*OperationResult, error) {
+	log.Printf("[%s] Executing operation %s", h.Hostname, o.Desc())
+	// Initialize session (this needs to be done per operation).
+	session, err := c.NewSession()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session: %v", err)
+	}
+	defer session.Close()
 
-	resChan := make(chan *OperationResult)
-	errChan := make(chan error)
-	done := make(chan bool)
+	stdOut, stdErr, err := w.RunScript(session, o.Script())
 
-	go func() {
-		for _, o := range operations {
-			log.Printf("[%s] Executing operation %s", h.Hostname, o.Desc())
-			// Initialize session (this needs to be done per operation).
-			// TODO Execute each operation in a separate function so that defer runs immediately
-			// at the end of an operation.
-			session, err := c.NewSession()
-			if err != nil {
-				errChan <- fmt.Errorf("failed to create session: %v", err)
-			}
-			defer session.Close()
+	r := OperationResult{
+		StdOut: *stdOut,
+		StdErr: *stdErr,
+	}
 
-			stdOut, stdErr, err := w.RunScript(session, o.Script())
-			if err != nil {
-				// Remote command returned an error
-				// TODO Separate command errors from SSH errors
-				errChan <- err
-				continue
-			}
-
-			r := OperationResult{
-				StdOut: *stdOut,
-				StdErr: *stdErr,
-			}
-
-			resChan <- &r
-		}
-
-		done <- true
-	}()
-
-	return resChan, errChan, done
+	return &r, err
 }
 
 // PublicKeyFile reads a private SSH key from a file and returns an ssh.AuthMethod.
@@ -192,15 +168,25 @@ func main() {
 		log.Fatalf("failed to dial: %v", err)
 	}
 
-	res, errChan, done := w.Execute(client, h, []Operation{&feo, &fco})
-	for {
-		select {
-		case <-res:
-		case e := <-errChan:
-			log.Printf("Operation returned an error: %v", e)
-		case <-done:
-			log.Println("Done")
-			return
+	res, err := w.ExecuteOperation(client, h, &feo)
+	if err != nil {
+		log.Printf("Execution failed: %v", err)
+		if res.StdOut != "" {
+			log.Printf("stdout: %s", res.StdOut)
+		}
+		if res.StdErr != "" {
+			log.Printf("stderr: %s", res.StdErr)
+		}
+	}
+
+	res, err = w.ExecuteOperation(client, h, &fco)
+	if err != nil {
+		log.Printf("Execution failed: %v", err)
+		if res.StdOut != "" {
+			log.Printf("stdout: %s", res.StdOut)
+		}
+		if res.StdErr != "" {
+			log.Printf("stderr: %s", res.StdErr)
 		}
 	}
 }
