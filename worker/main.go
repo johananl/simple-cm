@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -175,6 +176,7 @@ func main() {
 		// host. This, however, poses a security risk and a better mechanism should probably be
 		// used in production.
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
 	}
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", h.Hostname), config)
 	if err != nil {
