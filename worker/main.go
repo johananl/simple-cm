@@ -77,6 +77,29 @@ fi`
 	return fmt.Sprintf(s, o.Text, o.Path, o.Text, o.Path)
 }
 
+// RunScript runs a script on a remote machine using the provided SSH Session and returns the
+// stdout and stderr of the remote command as well as an error.
+func (w *Worker) RunScript(sess *ssh.Session, script string) (*string, *string, error) {
+	var stdOut, stdErr bytes.Buffer
+
+	sess.Stdout = &stdOut
+	sess.Stderr = &stdErr
+
+	log.Printf(
+		"Running the following script:\n"+
+			"===================================================================\n"+
+			"%s\n"+
+			"===================================================================",
+		script,
+	)
+	err := sess.Run(script)
+
+	stdOutStr := string(stdOut.Bytes())
+	stdErrStr := string(stdErr.Bytes())
+
+	return &stdOutStr, &stdErrStr, err
+}
+
 // Execute executes one or more Operations on a remote host. The function sends back
 // OperationResults and errors.
 // TODO Break this down and make this testable.
@@ -99,21 +122,7 @@ func (w *Worker) Execute(c *ssh.Client, h Host, operations []Operation) (chan *O
 			}
 			defer session.Close()
 
-			var stdOut, stdErr bytes.Buffer
-			session.Stdout = &stdOut
-			session.Stderr = &stdErr
-
-			script := o.Script()
-
-			log.Printf(
-				"[%s] Executing the following script:\n"+
-					"========================\n"+
-					"%s\n"+
-					"========================",
-				h.Hostname,
-				script,
-			)
-			err = session.Run(script)
+			stdOut, stdErr, err := w.RunScript(session, o.Script())
 			if err != nil {
 				// Remote command returned an error
 				// TODO Separate command errors from SSH errors
@@ -122,8 +131,8 @@ func (w *Worker) Execute(c *ssh.Client, h Host, operations []Operation) (chan *O
 			}
 
 			r := OperationResult{
-				StdOut: string(stdOut.Bytes()),
-				StdErr: string(stdErr.Bytes()),
+				StdOut: *stdOut,
+				StdErr: *stdErr,
 			}
 
 			resChan <- &r
@@ -186,8 +195,7 @@ func main() {
 	res, errChan, done := w.Execute(client, h, []Operation{&feo, &fco})
 	for {
 		select {
-		case r := <-res:
-			log.Printf("Operation returned exit code %d", r.ExitCode)
+		case <-res:
 		case e := <-errChan:
 			log.Printf("Operation returned an error: %v", e)
 		case <-done:
