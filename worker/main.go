@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -29,8 +30,10 @@ type Operation interface {
 
 // OperationResult represents the result of an Operation.
 type OperationResult struct {
-	StdOut string
-	StdErr string
+	Operation Operation
+	StdOut    string
+	StdErr    string
+	Error     error
 }
 
 // FileExistsOperation ensures the file at Path exists.
@@ -40,12 +43,12 @@ type FileExistsOperation struct {
 }
 
 // Desc returns the operation's description.
-func (o *FileExistsOperation) Desc() string {
+func (o FileExistsOperation) Desc() string {
 	return o.Description
 }
 
 // Script returns the operation's script which can then be executed on remote hosts.
-func (o *FileExistsOperation) Script() string {
+func (o FileExistsOperation) Script() string {
 	s := `#!/bin/bash
 
 if [ ! -f %s ]; then
@@ -62,12 +65,12 @@ type FileContainsOperation struct {
 }
 
 // Desc returns the operation's description.
-func (o *FileContainsOperation) Desc() string {
+func (o FileContainsOperation) Desc() string {
 	return o.Description
 }
 
 // Script returns the operation's script which can then be executed on remote hosts.
-func (o *FileContainsOperation) Script() string {
+func (o FileContainsOperation) Script() string {
 	s := `#!/bin/bash
 
 if ! grep -q %s %s; then
@@ -76,13 +79,74 @@ fi`
 	return fmt.Sprintf(s, o.Text, o.Path, o.Text, o.Path)
 }
 
-// RunScript runs a script on a remote machine using the provided SSH Session and returns the
-// stdout and stderr of the remote command as well as an error.
-func (w *Worker) RunScript(sess *ssh.Session, script string) (*string, *string, error) {
+type ExecuteInput struct {
+	Host       Host
+	Operations []Operation
+}
+
+type ExecuteOutput struct {
+	Results []OperationResult
+}
+
+// Execute executes one or more Operations on a remote host.
+func (w *Worker) Execute(in *ExecuteInput, out *ExecuteOutput) error {
+	// Initialize SSH connection to remote host
+	config := &ssh.ClientConfig{
+		User: in.Host.User,
+		Auth: []ssh.AuthMethod{PublicKeyFile(in.Host.KeyPath)},
+		// The following line prevents the need to manually approve each remote host as a known
+		// host. This, however, poses a security risk and a better mechanism should probably be
+		// used in production.
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
+	}
+	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", in.Host.Hostname), config)
+	if err != nil {
+		log.Fatalf("failed to dial: %v", err)
+	}
+
+	// Execute operations
+	var failures error
+	var results []OperationResult
+
+	for _, o := range in.Operations {
+		stdOut, stdErr, err := w.ExecuteOperation(client, in.Host, o)
+		if err != nil {
+			log.Printf("Execution failed: %v", err)
+			if *stdOut != "" {
+				log.Printf("stdout: %s", *stdOut)
+			}
+			if *stdErr != "" {
+				log.Printf("stderr: %s", *stdErr)
+			}
+			failures = errors.New("one or more operations failed")
+		}
+
+		r := OperationResult{Operation: o, StdOut: *stdOut, StdErr: *stdErr, Error: err}
+		results = append(results, r)
+	}
+	out.Results = results
+
+	return failures
+}
+
+// ExecuteOperation execute one Operation on a remote host. The function sends back OperationResults or an
+// error.
+func (w *Worker) ExecuteOperation(c *ssh.Client, h Host, o Operation) (*string, *string, error) {
+	log.Printf("[%s] Executing operation %s", h.Hostname, o.Desc())
+	// Initialize session (this needs to be done per operation).
+	sess, err := c.NewSession()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create session: %v", err)
+	}
+	defer sess.Close()
+
+	// stdOut, stdErr, err := w.RunScript(session, o.Script())
 	var stdOut, stdErr bytes.Buffer
 
 	sess.Stdout = &stdOut
 	sess.Stderr = &stdErr
+	script := o.Script()
 
 	log.Printf(
 		"Running the following script:\n"+
@@ -91,33 +155,12 @@ func (w *Worker) RunScript(sess *ssh.Session, script string) (*string, *string, 
 			"===================================================================",
 		script,
 	)
-	err := sess.Run(script)
+	err = sess.Run(script)
 
 	stdOutStr := string(stdOut.Bytes())
 	stdErrStr := string(stdErr.Bytes())
 
 	return &stdOutStr, &stdErrStr, err
-}
-
-// ExecuteOperation execute one Operation on a remote host. The function sends back OperationResults or an
-// error.
-func (w *Worker) ExecuteOperation(c *ssh.Client, h Host, o Operation) (*OperationResult, error) {
-	log.Printf("[%s] Executing operation %s", h.Hostname, o.Desc())
-	// Initialize session (this needs to be done per operation).
-	session, err := c.NewSession()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create session: %v", err)
-	}
-	defer session.Close()
-
-	stdOut, stdErr, err := w.RunScript(session, o.Script())
-
-	r := OperationResult{
-		StdOut: *stdOut,
-		StdErr: *stdErr,
-	}
-
-	return &r, err
 }
 
 // PublicKeyFile reads a private SSH key from a file and returns an ssh.AuthMethod.
@@ -153,40 +196,29 @@ func main() {
 		Text:        "hello",
 	}
 
-	// Initialize SSH connection to remote host
-	config := &ssh.ClientConfig{
-		User: h.User,
-		Auth: []ssh.AuthMethod{PublicKeyFile(h.KeyPath)},
-		// The following line prevents the need to manually approve each remote host as a known
-		// host. This, however, poses a security risk and a better mechanism should probably be
-		// used in production.
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         10 * time.Second,
-	}
-	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", h.Hostname), config)
-	if err != nil {
-		log.Fatalf("failed to dial: %v", err)
+	in := ExecuteInput{
+		Host:       h,
+		Operations: []Operation{feo, fco},
 	}
 
-	res, err := w.ExecuteOperation(client, h, &feo)
+	out := ExecuteOutput{}
+
+	err := w.Execute(&in, &out)
 	if err != nil {
-		log.Printf("Execution failed: %v", err)
-		if res.StdOut != "" {
-			log.Printf("stdout: %s", res.StdOut)
-		}
-		if res.StdErr != "" {
-			log.Printf("stderr: %s", res.StdErr)
+		log.Printf("Errors during execution")
+	}
+
+	log.Println("Completed operations:")
+	for _, r := range out.Results {
+		if r.Error == nil {
+			fmt.Println(r.Operation.Desc())
 		}
 	}
 
-	res, err = w.ExecuteOperation(client, h, &fco)
-	if err != nil {
-		log.Printf("Execution failed: %v", err)
-		if res.StdOut != "" {
-			log.Printf("stdout: %s", res.StdOut)
-		}
-		if res.StdErr != "" {
-			log.Printf("stderr: %s", res.StdErr)
+	log.Println("Failed operations:")
+	for _, r := range out.Results {
+		if r.Error != nil {
+			fmt.Println(r.Operation.Desc())
 		}
 	}
 }
