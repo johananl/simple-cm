@@ -1,54 +1,33 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"net"
+	"net/rpc"
 
 	"github.com/johananl/simple-cm/worker"
 )
 
 func main() {
-	w := worker.Worker{}
-	h := worker.Host{
-		Hostname: "172.28.128.3",
-		User:     "vagrant",
-		KeyPath:  "./private_key",
-	}
+	w := new(worker.Worker)
+	rpc.Register(w)
 
-	feo := worker.FileExistsOperation{
-		Description: "check_test_file_exists",
-		Path:        "/tmp/test.txt",
-	}
-
-	fco := worker.FileContainsOperation{
-		Description: "check_test_file_contains_hello",
-		Path:        "/tmp/test.txt",
-		Text:        "hello",
-	}
-
-	in := worker.ExecuteInput{
-		Host:       h,
-		Operations: []worker.Operation{feo, fco},
-	}
-
-	out := worker.ExecuteOutput{}
-
-	err := w.Execute(&in, &out)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", ":1234")
 	if err != nil {
-		log.Printf("Errors during execution")
+		log.Fatalf("error resolving TCP address: %v", err)
 	}
 
-	log.Println("Completed operations:")
-	for _, r := range out.Results {
-		if r.Error == nil {
-			fmt.Println(r.Operation.Desc())
-		}
+	l, err := net.ListenTCP("tcp", tcpAddr)
+	if err != nil {
+		log.Fatalf("error listening: %v", err)
 	}
 
-	log.Println("Failed operations:")
-	for _, r := range out.Results {
-		if r.Error != nil {
-			fmt.Println(r.Operation.Desc())
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			log.Printf("error accepting: %v", err)
+			continue
 		}
+		rpc.ServeConn(conn)
 	}
 }
