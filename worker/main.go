@@ -79,11 +79,15 @@ fi`
 	return fmt.Sprintf(s, o.Text, o.Path, o.Text, o.Path)
 }
 
+// ExecuteInput represents the input to the Execute function. It should contain a Host and
+// a slice of Operations.
 type ExecuteInput struct {
 	Host       Host
 	Operations []Operation
 }
 
+// ExecuteOutput represents the output returned by the Execute function. The output contains a
+// slice of OperationResults.
 type ExecuteOutput struct {
 	Results []OperationResult
 }
