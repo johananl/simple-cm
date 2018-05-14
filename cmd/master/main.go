@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/gob"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/rpc"
@@ -50,30 +51,62 @@ func main() {
 	var out worker.ExecuteOutput
 	err = client.Call("Worker.Execute", in, &out)
 	if err != nil {
-		log.Fatalf("error executing operations: %v", err)
+		log.Printf("error executing operations: %v", err)
 	}
 
 	// Analyze results
 	var good, bad []worker.OperationResult
 	for _, i := range out.Results {
-		if i.Error != nil {
-			bad = append(bad, i)
-		} else {
+		if i.Successful {
 			good = append(good, i)
+		} else {
+			bad = append(bad, i)
 		}
 	}
 
 	if len(good) > 0 {
 		log.Println("Completed operations:")
 		for _, i := range good {
-			log.Println(i.Operation.Desc())
+			fmt.Println(i.Operation.Desc())
+			if i.StdOut != "" {
+				fmt.Printf("stdout:\n"+
+					"===================================================================\n"+
+					"%s\n"+
+					"===================================================================",
+					i.StdOut,
+				)
+			}
+			if i.StdErr != "" {
+				fmt.Printf("stderr:\n"+
+					"===================================================================\n"+
+					"%s\n"+
+					"===================================================================\n",
+					i.StdErr,
+				)
+			}
 		}
 	}
 
 	if len(bad) > 0 {
 		log.Println("Failed operations:")
 		for _, i := range bad {
-			log.Println(i.Operation.Desc())
+			fmt.Println(i.Operation.Desc())
+			if i.StdOut != "" {
+				fmt.Printf("stdout:\n"+
+					"===================================================================\n"+
+					"%s\n"+
+					"===================================================================\n",
+					i.StdOut,
+				)
+			}
+			if i.StdErr != "" {
+				fmt.Printf("stderr:\n"+
+					"===================================================================\n"+
+					"%s\n"+
+					"===================================================================\n",
+					i.StdErr,
+				)
+			}
 		}
 	}
 }

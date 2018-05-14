@@ -2,7 +2,6 @@ package worker
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -33,10 +32,10 @@ type Operation interface {
 
 // OperationResult represents the result of an Operation.
 type OperationResult struct {
-	Operation Operation
-	StdOut    string
-	StdErr    string
-	Error     error
+	Operation  Operation
+	StdOut     string
+	StdErr     string
+	Successful bool
 }
 
 // FileExistsOperation ensures the file at Path exists.
@@ -118,11 +117,12 @@ func (w *Worker) Execute(in *ExecuteInput, out *ExecuteOutput) error {
 	}
 
 	// Execute operations
-	var failures error
 	var results []OperationResult
 
 	for _, o := range in.Operations {
 		stdOut, stdErr, err := w.executeOperation(client, in.Host, o)
+
+		r := OperationResult{Operation: o, StdOut: *stdOut, StdErr: *stdErr}
 		if err != nil {
 			log.Printf("Execution failed: %v", err)
 			if *stdOut != "" {
@@ -131,15 +131,14 @@ func (w *Worker) Execute(in *ExecuteInput, out *ExecuteOutput) error {
 			if *stdErr != "" {
 				log.Printf("stderr: %s", *stdErr)
 			}
-			failures = errors.New("one or more operations failed")
+		} else {
+			r.Successful = true
 		}
-
-		r := OperationResult{Operation: o, StdOut: *stdOut, StdErr: *stdErr, Error: err}
 		results = append(results, r)
 	}
 	out.Results = results
 
-	return failures
+	return nil
 }
 
 // Executes one Operation on a remote host. The function sends back OperationResults or an error.
@@ -163,7 +162,7 @@ func (w *Worker) executeOperation(c *ssh.Client, h Host, o Operation) (*string, 
 		"Running the following script:\n"+
 			"===================================================================\n"+
 			"%s\n"+
-			"===================================================================",
+			"===================================================================\n",
 		script,
 	)
 	err = sess.Run(script)
