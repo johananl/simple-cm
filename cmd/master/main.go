@@ -8,6 +8,8 @@ import (
 	"net/rpc"
 
 	"github.com/johananl/simple-cm/worker"
+
+	ops "github.com/johananl/simple-cm/operations"
 )
 
 // Formats a script's output for visual clarity.
@@ -19,8 +21,8 @@ func formatScriptOutput(s string) string {
 
 func main() {
 	// Register types to allow gob serialization
-	gob.Register(worker.FileExistsOperation{})
-	gob.Register(worker.FileContainsOperation{})
+	gob.Register(ops.FileExistsOperation{})
+	gob.Register(ops.FileContainsOperation{})
 
 	// TODO Read wiring params from environment
 	client, err := rpc.DialHTTP("tcp", "localhost:8888")
@@ -39,12 +41,12 @@ func main() {
 		User:     "vagrant",
 		Key:      buffer,
 	}
-	o := []worker.Operation{
-		worker.FileExistsOperation{
+	o := []ops.Operation{
+		ops.FileExistsOperation{
 			Description: "verify_test_file_exists",
 			Path:        "/tmp/test.txt",
 		},
-		worker.FileContainsOperation{
+		ops.FileContainsOperation{
 			Description: "verify_test_file_contains_hello",
 			Path:        "/tmp/test.txt",
 			Text:        "hello",
@@ -62,7 +64,7 @@ func main() {
 	}
 
 	// Analyze results
-	var good, bad []worker.OperationResult
+	var good, bad []ops.OperationResult
 	for _, i := range out.Results {
 		if i.Successful {
 			good = append(good, i)
