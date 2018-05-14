@@ -97,7 +97,7 @@ func (w *Worker) Execute(in *ExecuteInput, out *ExecuteOutput) error {
 	// Initialize SSH connection to remote host
 	config := &ssh.ClientConfig{
 		User: in.Host.User,
-		Auth: []ssh.AuthMethod{PublicKeyFile(in.Host.KeyPath)},
+		Auth: []ssh.AuthMethod{publicKeyFile(in.Host.KeyPath)},
 		// The following line prevents the need to manually approve each remote host as a known
 		// host. This, however, poses a security risk and a better mechanism should probably be
 		// used in production.
@@ -114,7 +114,7 @@ func (w *Worker) Execute(in *ExecuteInput, out *ExecuteOutput) error {
 	var results []OperationResult
 
 	for _, o := range in.Operations {
-		stdOut, stdErr, err := w.ExecuteOperation(client, in.Host, o)
+		stdOut, stdErr, err := w.executeOperation(client, in.Host, o)
 		if err != nil {
 			log.Printf("Execution failed: %v", err)
 			if *stdOut != "" {
@@ -134,9 +134,8 @@ func (w *Worker) Execute(in *ExecuteInput, out *ExecuteOutput) error {
 	return failures
 }
 
-// ExecuteOperation execute one Operation on a remote host. The function sends back OperationResults or an
-// error.
-func (w *Worker) ExecuteOperation(c *ssh.Client, h Host, o Operation) (*string, *string, error) {
+// Executes one Operation on a remote host. The function sends back OperationResults or an error.
+func (w *Worker) executeOperation(c *ssh.Client, h Host, o Operation) (*string, *string, error) {
 	log.Printf("[%s] Executing operation %s", h.Hostname, o.Desc())
 	// Initialize session (this needs to be done per operation).
 	sess, err := c.NewSession()
@@ -167,8 +166,8 @@ func (w *Worker) ExecuteOperation(c *ssh.Client, h Host, o Operation) (*string, 
 	return &stdOutStr, &stdErrStr, err
 }
 
-// PublicKeyFile reads a private SSH key from a file and returns an ssh.AuthMethod.
-func PublicKeyFile(file string) ssh.AuthMethod {
+// Reads a private SSH key from a file and returns an ssh.AuthMethod.
+func publicKeyFile(file string) ssh.AuthMethod {
 	buffer, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil
