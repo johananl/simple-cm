@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/gob"
+	"io/ioutil"
 	"log"
 	"net/rpc"
 
@@ -8,15 +10,26 @@ import (
 )
 
 func main() {
-	client, err := rpc.Dial("tcp", "localhost:1234")
+	// Register types to allow gob serialization
+	gob.Register(worker.FileExistsOperation{})
+	gob.Register(worker.FileContainsOperation{})
+
+	// TODO Read wiring params from environment
+	client, err := rpc.DialHTTP("tcp", "localhost:8888")
 	if err != nil {
 		log.Fatalf("error dialing: %v", err)
+	}
+
+	// Read SSH private key
+	buffer, err := ioutil.ReadFile("./private_key")
+	if err != nil {
+		log.Fatalf("error reading SSH key: %v", err)
 	}
 
 	h := worker.Host{
 		Hostname: "172.28.128.3",
 		User:     "vagrant",
-		KeyPath:  "~/tmp/private_key",
+		Key:      buffer,
 	}
 	o := []worker.Operation{
 		worker.FileExistsOperation{

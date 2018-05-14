@@ -1,33 +1,26 @@
 package main
 
 import (
+	"encoding/gob"
 	"log"
-	"net"
+	"net/http"
 	"net/rpc"
 
 	"github.com/johananl/simple-cm/worker"
 )
 
 func main() {
+	// Register types to allow gob serialization
+	gob.Register(worker.FileExistsOperation{})
+	gob.Register(worker.FileContainsOperation{})
+
+	// Initialize RPC server
 	w := new(worker.Worker)
 	rpc.Register(w)
+	rpc.HandleHTTP()
 
-	tcpAddr, err := net.ResolveTCPAddr("tcp", ":1234")
+	err := http.ListenAndServe(":8888", nil)
 	if err != nil {
-		log.Fatalf("error resolving TCP address: %v", err)
-	}
-
-	l, err := net.ListenTCP("tcp", tcpAddr)
-	if err != nil {
-		log.Fatalf("error listening: %v", err)
-	}
-
-	for {
-		conn, err := l.Accept()
-		if err != nil {
-			log.Printf("error accepting: %v", err)
-			continue
-		}
-		rpc.ServeConn(conn)
+		log.Fatal(err)
 	}
 }

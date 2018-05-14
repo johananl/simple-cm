@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"time"
 
@@ -15,11 +14,13 @@ import (
 type Worker struct{}
 
 // Host is a remote host against which Operations can be executed. The host should be reachable at
-// Hostname over SSH using user User with SSH key at path KeyPath.
+// Hostname over SSH using user User with private SSH key Key (Key contains the actual contents).
+// TODO Store key contents here instead of path. The current situation creates a coupling between
+// master and worker because of the file path.
 type Host struct {
 	Hostname string
 	User     string
-	KeyPath  string
+	Key      []byte
 }
 
 // Operation is an interface representing a generic operation.
@@ -95,9 +96,14 @@ type ExecuteOutput struct {
 // Execute executes one or more Operations on a remote host.
 func (w *Worker) Execute(in *ExecuteInput, out *ExecuteOutput) error {
 	// Initialize SSH connection to remote host
+	k, err := publicKey(in.Host.Key)
+	if err != nil {
+		return fmt.Errorf("could not parse SSH key: %v", err)
+	}
+
 	config := &ssh.ClientConfig{
 		User: in.Host.User,
-		Auth: []ssh.AuthMethod{publicKeyFile(in.Host.KeyPath)},
+		Auth: []ssh.AuthMethod{k},
 		// The following line prevents the need to manually approve each remote host as a known
 		// host. This, however, poses a security risk and a better mechanism should probably be
 		// used in production.
@@ -166,16 +172,11 @@ func (w *Worker) executeOperation(c *ssh.Client, h Host, o Operation) (*string, 
 	return &stdOutStr, &stdErrStr, err
 }
 
-// Reads a private SSH key from a file and returns an ssh.AuthMethod.
-func publicKeyFile(file string) ssh.AuthMethod {
-	buffer, err := ioutil.ReadFile(file)
+// Parses a private key and returns an ssh.AuthMethod.
+func publicKey(b []byte) (ssh.AuthMethod, error) {
+	key, err := ssh.ParsePrivateKey(b)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("error parsing key: %v", err)
 	}
-
-	key, err := ssh.ParsePrivateKey(buffer)
-	if err != nil {
-		return nil
-	}
-	return ssh.PublicKeys(key)
+	return ssh.PublicKeys(key), nil
 }
