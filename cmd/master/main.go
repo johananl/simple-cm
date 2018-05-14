@@ -66,14 +66,14 @@ func main() {
 	if len(good) > 0 {
 		log.Println("Completed operations:")
 		for _, i := range good {
-			log.Println(i.Operation)
+			log.Println(i.Operation.Desc())
 		}
 	}
 
 	if len(bad) > 0 {
 		log.Println("Failed operations:")
 		for _, i := range bad {
-			log.Println(i.Operation)
+			log.Println(i.Operation.Desc())
 		}
 	}
 }
