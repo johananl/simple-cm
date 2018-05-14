@@ -10,6 +10,13 @@ import (
 	"github.com/johananl/simple-cm/worker"
 )
 
+// Formats a script's output for visual clarity.
+func formatScriptOutput(s string) string {
+	return "===================================================================\n" +
+		s + "\n" +
+		"===================================================================\n"
+}
+
 func main() {
 	// Register types to allow gob serialization
 	gob.Register(worker.FileExistsOperation{})
@@ -64,25 +71,16 @@ func main() {
 		}
 	}
 
+	// TODO Set colors for success / fail
 	if len(good) > 0 {
 		log.Println("Completed operations:")
 		for _, i := range good {
-			fmt.Println(i.Operation.Desc())
+			fmt.Println("* ", i.Operation.Desc())
 			if i.StdOut != "" {
-				fmt.Printf("stdout:\n"+
-					"===================================================================\n"+
-					"%s\n"+
-					"===================================================================",
-					i.StdOut,
-				)
+				fmt.Printf("stdout:\n%v", formatScriptOutput(i.StdOut))
 			}
 			if i.StdErr != "" {
-				fmt.Printf("stderr:\n"+
-					"===================================================================\n"+
-					"%s\n"+
-					"===================================================================\n",
-					i.StdErr,
-				)
+				fmt.Printf("stderr:\n%v", formatScriptOutput(i.StdErr))
 			}
 		}
 	}
@@ -90,22 +88,12 @@ func main() {
 	if len(bad) > 0 {
 		log.Println("Failed operations:")
 		for _, i := range bad {
-			fmt.Println(i.Operation.Desc())
+			fmt.Println("* ", i.Operation.Desc())
 			if i.StdOut != "" {
-				fmt.Printf("stdout:\n"+
-					"===================================================================\n"+
-					"%s\n"+
-					"===================================================================\n",
-					i.StdOut,
-				)
+				fmt.Printf("stdout:\n%v", formatScriptOutput(i.StdOut))
 			}
 			if i.StdErr != "" {
-				fmt.Printf("stderr:\n"+
-					"===================================================================\n"+
-					"%s\n"+
-					"===================================================================\n",
-					i.StdErr,
-				)
+				fmt.Printf("stderr:\n%v", formatScriptOutput(i.StdErr))
 			}
 		}
 	}
