@@ -20,14 +20,6 @@ type Operation interface {
 	Script() string
 }
 
-// OperationResult represents the result of an Operation.
-type OperationResult struct {
-	Operation  Operation
-	StdOut     string
-	StdErr     string
-	Successful bool
-}
-
 // FileExistsOperation ensures the file at Path exists.
 type FileExistsOperation struct {
 	Description string
@@ -69,4 +61,12 @@ if ! grep -q %s %s; then
 	echo "%s" >> %s
 fi`
 	return fmt.Sprintf(s, o.Text, o.Path, o.Text, o.Path)
+}
+
+// OperationResult represents the result of an Operation.
+type OperationResult struct {
+	Operation  Operation
+	StdOut     string
+	StdErr     string
+	Successful bool
 }
