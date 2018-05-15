@@ -1,0 +1,1 @@
+insert into simplecm.hosts (id, hostname, user) values (uuid(), '172.28.128.3', 'vagrant');
