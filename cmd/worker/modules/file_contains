@@ -1,5 +1,5 @@
 #!/bin/bash
 
-if ! grep -q {{.Text}} {{.Path}}; then
-    echo "{{.Text}}" >> {{.Path}}
+if ! grep -q {{.text}} {{.path}}; then
+    echo "{{.text}}" >> {{.path}}
 fi

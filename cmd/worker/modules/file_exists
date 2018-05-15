@@ -1,5 +1,5 @@
 #!/bin/bash
 
-if [ ! -f {{.Path}} ]; then
-    touch {{.Path}}
+if [ ! -f {{.path}} ]; then
+    touch {{.path}}
 fi

@@ -14,10 +14,6 @@ import (
 	"github.com/gocql/gocql"
 )
 
-const (
-	moduleDir = "modules"
-)
-
 // Formats a script's output for visual clarity.
 func formatScriptOutput(s string) string {
 	return "===================================================================\n" +
@@ -63,33 +59,21 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			operations := []ops.Operation{
-				ops.Operation{
-					Description: "verify_test_file_exists",
-					Module:      fmt.Sprintf("%s/%s", moduleDir, "file_exists"),
-					Attributes: map[string]string{
-						"Path": "/tmp/test.txt",
-					},
-				},
-				ops.Operation{
-					Description: "verify_test_file_contains_hello",
-					Module:      fmt.Sprintf("%s/%s", moduleDir, "file_contains"),
-					Attributes: map[string]string{
-						"Path": "/tmp/test.txt",
-						"Text": "hello",
-					},
-				},
+
+			// Get operations for host
+			var operations []ops.Operation
+			var description, scriptName string
+			var attributes map[string]string
+			q := `SELECT description, script_name, attributes FROM operations where hostname = ?`
+			iter := session.Query(q, h.Hostname).Iter()
+			for iter.Scan(&description, &scriptName, &attributes) {
+				o := ops.Operation{
+					Description: description,
+					ScriptName:  scriptName,
+					Attributes:  attributes,
+				}
+				operations = append(operations, o)
 			}
-
-			// // Get operations for host
-			// var operations []ops.Operation
-			// var hostname, opType string
-			// var attributes map[string]string
-			// q := `SELECT hostname, op_type, attributes FROM operations`
-			// iter := session.Query(q).Iter()
-			// for iter.Scan(&hostname, &opType, &attributes) {
-
-			// }
 
 			in := worker.ExecuteInput{
 				Host:       h,

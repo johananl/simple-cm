@@ -10,8 +10,8 @@ import (
 
 func main() {
 	// Initialize RPC server
-	w := new(worker.Worker)
-	rpc.Register(w)
+	w := worker.Worker{ModuleDir: "./modules"}
+	rpc.Register(&w)
 	rpc.HandleHTTP()
 
 	err := http.ListenAndServe(":8888", nil)

@@ -15,14 +15,14 @@ func TestScript(t *testing.T) {
 
 	o := Operation{
 		Description: "test_op",
-		Module:      "test.txt",
+		ScriptName:  "test.txt",
 		Attributes: map[string]string{
 			"what": "what",
 			"ever": "ever",
 		},
 	}
 
-	s, err := o.Script()
+	s, err := o.Script(".")
 	if err != nil {
 		t.Fatal(err)
 	}

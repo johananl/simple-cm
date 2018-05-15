@@ -21,15 +21,16 @@ type Host struct {
 
 type Operation struct {
 	Description string
-	Module      string
+	ScriptName  string
 	Attributes  map[string]string
 }
 
 // Script return the script which needs to be run in order to execute an Operation.
-func (o *Operation) Script() (string, error) {
-	log.Printf("Reading script at %s", o.Module)
+// TODO Improve handling of module dir path
+func (o *Operation) Script(moduleDir string) (string, error) {
+	log.Printf("Reading script at %s", o.ScriptName)
 	// Template script with attributes
-	tmpl, err := template.ParseFiles(o.Module)
+	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/%s", moduleDir, o.ScriptName))
 	if err != nil {
 		return "", fmt.Errorf("error parsing script template: %v", err)
 	}

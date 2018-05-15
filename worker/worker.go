@@ -11,7 +11,9 @@ import (
 )
 
 // A Worker executes operations.
-type Worker struct{}
+type Worker struct {
+	ModuleDir string
+}
 
 // ExecuteInput represents the input to the Execute function. It should contain a Host and
 // a slice of Operations.
@@ -87,7 +89,7 @@ func (w *Worker) executeOperation(c *ssh.Client, h ops.Host, o ops.Operation) (s
 
 	sess.Stdout = &stdOut
 	sess.Stderr = &stdErr
-	script, err := o.Script()
+	script, err := o.Script(w.ModuleDir)
 	if err != nil {
 		return "", "", err
 	}
