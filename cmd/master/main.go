@@ -25,17 +25,7 @@ func formatScriptOutput(s string) string {
 		"===================================================================\n"
 }
 
-// Allows resolving a string denoting an operation's type to the correct Go type.
-// var factory = map[string]interface{}{
-// 	"FileExistsOperation":   ops.FileContainsOperation{},
-// 	"FileContainsOperation": ops.FileContainsOperation{},
-// }
-
 func main() {
-	// Register types to allow gob serialization
-	// gob.Register(ops.FileExistsOperation{})
-	// gob.Register(ops.FileContainsOperation{})
-
 	// Read SSH private key
 	key, err := ioutil.ReadFile(os.Getenv("SSH_KEY"))
 	if err != nil {
@@ -73,17 +63,6 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			// operations := []ops.Operation{
-			// 	ops.FileExistsOperation{
-			// 		Description: "verify_test_file_exists",
-			// 		Path:        "/tmp/test.txt",
-			// 	},
-			// 	ops.FileContainsOperation{
-			// 		Description: "verify_test_file_contains_hello",
-			// 		Path:        "/tmp/test.txt",
-			// 		Text:        "hello",
-			// 	},
-			// }
 			operations := []ops.Operation{
 				ops.Operation{
 					Description: "verify_test_file_exists",
