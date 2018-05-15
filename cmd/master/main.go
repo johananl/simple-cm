@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,6 +14,10 @@ import (
 	"github.com/gocql/gocql"
 )
 
+const (
+	moduleDir = "modules"
+)
+
 // Formats a script's output for visual clarity.
 func formatScriptOutput(s string) string {
 	return "===================================================================\n" +
@@ -22,10 +25,16 @@ func formatScriptOutput(s string) string {
 		"===================================================================\n"
 }
 
+// Allows resolving a string denoting an operation's type to the correct Go type.
+// var factory = map[string]interface{}{
+// 	"FileExistsOperation":   ops.FileContainsOperation{},
+// 	"FileContainsOperation": ops.FileContainsOperation{},
+// }
+
 func main() {
 	// Register types to allow gob serialization
-	gob.Register(ops.FileExistsOperation{})
-	gob.Register(ops.FileContainsOperation{})
+	// gob.Register(ops.FileExistsOperation{})
+	// gob.Register(ops.FileContainsOperation{})
 
 	// Read SSH private key
 	key, err := ioutil.ReadFile(os.Getenv("SSH_KEY"))
@@ -64,21 +73,48 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			o := []ops.Operation{
-				ops.FileExistsOperation{
+			// operations := []ops.Operation{
+			// 	ops.FileExistsOperation{
+			// 		Description: "verify_test_file_exists",
+			// 		Path:        "/tmp/test.txt",
+			// 	},
+			// 	ops.FileContainsOperation{
+			// 		Description: "verify_test_file_contains_hello",
+			// 		Path:        "/tmp/test.txt",
+			// 		Text:        "hello",
+			// 	},
+			// }
+			operations := []ops.Operation{
+				ops.Operation{
 					Description: "verify_test_file_exists",
-					Path:        "/tmp/test.txt",
+					Module:      fmt.Sprintf("%s/%s", moduleDir, "file_exists"),
+					Attributes: map[string]string{
+						"Path": "/tmp/test.txt",
+					},
 				},
-				ops.FileContainsOperation{
+				ops.Operation{
 					Description: "verify_test_file_contains_hello",
-					Path:        "/tmp/test.txt",
-					Text:        "hello",
+					Module:      fmt.Sprintf("%s/%s", moduleDir, "file_contains"),
+					Attributes: map[string]string{
+						"Path": "/tmp/test.txt",
+						"Text": "hello",
+					},
 				},
 			}
 
+			// // Get operations for host
+			// var operations []ops.Operation
+			// var hostname, opType string
+			// var attributes map[string]string
+			// q := `SELECT hostname, op_type, attributes FROM operations`
+			// iter := session.Query(q).Iter()
+			// for iter.Scan(&hostname, &opType, &attributes) {
+
+			// }
+
 			in := worker.ExecuteInput{
 				Host:       h,
-				Operations: o,
+				Operations: operations,
 			}
 			var out worker.ExecuteOutput
 			err = client.Call("Worker.Execute", in, &out)
@@ -100,7 +136,7 @@ func main() {
 			if len(good) > 0 {
 				log.Println("Completed operations:")
 				for _, i := range good {
-					fmt.Println("* ", i.Operation.Desc())
+					fmt.Println("* ", i.Operation.Description)
 					if i.StdOut != "" {
 						fmt.Printf("stdout:\n%v", formatScriptOutput(i.StdOut))
 					}
@@ -113,7 +149,7 @@ func main() {
 			if len(bad) > 0 {
 				log.Println("Failed operations:")
 				for _, i := range bad {
-					fmt.Println("* ", i.Operation.Desc())
+					fmt.Println("* ", i.Operation.Description)
 					if i.StdOut != "" {
 						fmt.Printf("stdout:\n%v", formatScriptOutput(i.StdOut))
 					}

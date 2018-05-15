@@ -45,7 +45,7 @@ func (w *Worker) Execute(in *ExecuteInput, out *ExecuteOutput) error {
 	}
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", in.Host.Hostname), config)
 	if err != nil {
-		log.Fatalf("failed to dial: %v", err)
+		return fmt.Errorf("failed to dial: %v", err)
 	}
 
 	// Execute operations
@@ -54,14 +54,14 @@ func (w *Worker) Execute(in *ExecuteInput, out *ExecuteOutput) error {
 	for _, o := range in.Operations {
 		stdOut, stdErr, err := w.executeOperation(client, in.Host, o)
 
-		r := ops.OperationResult{Operation: o, StdOut: *stdOut, StdErr: *stdErr}
+		r := ops.OperationResult{Operation: o, StdOut: stdOut, StdErr: stdErr}
 		if err != nil {
 			log.Printf("Execution failed: %v", err)
-			if *stdOut != "" {
-				log.Printf("stdout: %s", *stdOut)
+			if stdOut != "" {
+				log.Printf("stdout: %s", stdOut)
 			}
-			if *stdErr != "" {
-				log.Printf("stderr: %s", *stdErr)
+			if stdErr != "" {
+				log.Printf("stderr: %s", stdErr)
 			}
 		} else {
 			r.Successful = true
@@ -74,21 +74,23 @@ func (w *Worker) Execute(in *ExecuteInput, out *ExecuteOutput) error {
 }
 
 // Executes one Operation on a remote host. The function sends back OperationResults or an error.
-func (w *Worker) executeOperation(c *ssh.Client, h ops.Host, o ops.Operation) (*string, *string, error) {
-	log.Printf("[%s] Executing operation %s", h.Hostname, o.Desc())
+func (w *Worker) executeOperation(c *ssh.Client, h ops.Host, o ops.Operation) (string, string, error) {
+	log.Printf("[%s] Executing operation %s", h.Hostname, o.Description)
 	// Initialize session (this needs to be done per operation).
 	sess, err := c.NewSession()
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create session: %v", err)
+		return "", "", fmt.Errorf("failed to create session: %v", err)
 	}
 	defer sess.Close()
 
-	// stdOut, stdErr, err := w.RunScript(session, o.Script())
 	var stdOut, stdErr bytes.Buffer
 
 	sess.Stdout = &stdOut
 	sess.Stderr = &stdErr
-	script := o.Script()
+	script, err := o.Script()
+	if err != nil {
+		return "", "", err
+	}
 
 	log.Printf(
 		"Running the following script:\n"+
@@ -102,7 +104,7 @@ func (w *Worker) executeOperation(c *ssh.Client, h ops.Host, o ops.Operation) (*
 	stdOutStr := string(stdOut.Bytes())
 	stdErrStr := string(stdErr.Bytes())
 
-	return &stdOutStr, &stdErrStr, err
+	return stdOutStr, stdErrStr, err
 }
 
 // Parses a private key and returns an ssh.AuthMethod.

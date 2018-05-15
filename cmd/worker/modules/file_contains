@@ -1,0 +1,5 @@
+#!/bin/bash
+
+if ! grep -q {{.Text}} {{.Path}}; then
+    echo "{{.Text}}" >> {{.Path}}
+fi
