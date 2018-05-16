@@ -97,13 +97,7 @@ func (w *Worker) executeOperation(c *ssh.Client, host string, o ops.Operation) (
 		return "", "", err
 	}
 
-	log.Printf(
-		"Running the following script:\n"+
-			"===================================================================\n"+
-			"%s\n"+
-			"===================================================================\n",
-		script,
-	)
+	log.Printf("Running the following script:\n%v", formatScriptOutput(script))
 	err = sess.Run(script)
 
 	stdOutStr := string(stdOut.Bytes())
@@ -119,4 +113,11 @@ func parseKey(b []byte) (ssh.AuthMethod, error) {
 		return nil, fmt.Errorf("error parsing key: %v", err)
 	}
 	return ssh.PublicKeys(key), nil
+}
+
+// Formats a script's output for visual clarity.
+func formatScriptOutput(s string) string {
+	return "===================================================================\n" +
+		s + "\n" +
+		"===================================================================\n"
 }
