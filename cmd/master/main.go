@@ -2,16 +2,13 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/rpc"
-	"os"
 	"sync"
 
+	"github.com/johananl/simple-cm/master"
 	ops "github.com/johananl/simple-cm/operations"
 	"github.com/johananl/simple-cm/worker"
-
-	"github.com/gocql/gocql"
 )
 
 // Formats a script's output for visual clarity.
@@ -22,30 +19,29 @@ func formatScriptOutput(s string) string {
 }
 
 func main() {
-	// Read SSH private key
-	key, err := ioutil.ReadFile(os.Getenv("SSH_KEY"))
-	if err != nil {
-		log.Fatalf("error reading SSH key: %v", err)
-	}
+	// Init master
+	m := master.Master{SSHKeysPath: "./ssh_keys"}
 
 	// Connect to DB
-	cluster := gocql.NewCluster("127.0.0.1")
-	cluster.Keyspace = "simplecm"
-	session, _ := cluster.CreateSession()
-	defer session.Close()
+	session, err := m.ConnectToDB([]string{"127.0.0.1"}, "simplecm")
+	if err != nil {
+		log.Fatalf("could not connect to DB: %v", err)
+	}
 
 	// Get all hosts
 	var hosts []ops.Host
-	var hostname, user string
-	q := `SELECT hostname, user FROM hosts`
+	var hostname, user, keyName string
+	q := `SELECT hostname, user, key_name FROM hosts`
 	iter := session.Query(q).Iter()
-	for iter.Scan(&hostname, &user) {
+	for iter.Scan(&hostname, &user, &keyName) {
 		hosts = append(hosts, ops.Host{
 			Hostname: hostname,
 			User:     user,
-			Key:      []byte(key),
+			KeyName:  keyName,
 		})
 	}
+
+	log.Printf("%d hosts retrieved from DB", len(hosts))
 
 	// Connect to workers
 	// TODO Read wiring params from environment
@@ -75,8 +71,17 @@ func main() {
 				operations = append(operations, o)
 			}
 
+			key, err := m.SSHKey(h.KeyName)
+			if err != nil {
+				log.Printf("error reading SSH key for host %v: %v", h.Hostname, err)
+				// TODO Handle failure indications for all operaions
+				return
+			}
+
 			in := worker.ExecuteInput{
-				Host:       h,
+				Hostname:   h.Hostname,
+				User:       h.User,
+				Key:        key,
 				Operations: operations,
 			}
 			var out worker.ExecuteOutput

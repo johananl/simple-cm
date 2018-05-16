@@ -1,4 +1,4 @@
-insert into simplecm.hosts (hostname, user) values ('172.28.128.3', 'vagrant');
+insert into simplecm.hosts (hostname, user, key_name) values ('172.28.128.3', 'vagrant', 'private_key');
 
 insert into simplecm.operations (hostname, description, script_name, attributes)
     values ('172.28.128.3', 'verify_test_file_exists', 'file_exists', {'path': '/tmp/test.txt'});

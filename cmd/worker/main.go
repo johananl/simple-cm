@@ -10,7 +10,7 @@ import (
 
 func main() {
 	// Initialize RPC server
-	w := worker.Worker{ModuleDir: "./modules"}
+	w := worker.Worker{ModulesDir: "./modules"}
 	rpc.Register(&w)
 	rpc.HandleHTTP()
 

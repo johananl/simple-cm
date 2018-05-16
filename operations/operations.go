@@ -8,7 +8,7 @@ import (
 )
 
 // Host is a remote host against which Operations can be executed. The host should be reachable at
-// Hostname over SSH using user User with private SSH key Key (Key contains the actual contents).
+// Hostname over SSH using user User with the private SSH key named Key.
 type Host struct {
 	Hostname string
 	User     string
@@ -16,7 +16,7 @@ type Host struct {
 	// This is highly unsecure and should not be used as-is in production. Possible solutions:
 	// - Encrypt the communication between master and worker.
 	// - Store the keys in a secure, reference the key name from master and have worker pull it.
-	Key []byte
+	KeyName string
 }
 
 type Operation struct {
