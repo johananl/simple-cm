@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/rpc"
 
 	"github.com/gocql/gocql"
 	ops "github.com/johananl/simple-cm/operations"
@@ -12,6 +13,7 @@ import (
 // A Master coordinates Operations among Workers.
 type Master struct {
 	SSHKeysPath string
+	Workers     []*rpc.Client
 }
 
 // ConnectToDB connects to the given DB and returns a *gocql.Session.
@@ -70,4 +72,10 @@ func (m *Master) GetOperations(session *gocql.Session, hostname string) []ops.Op
 	}
 
 	return operations
+}
+
+// SelectWorker returns the best worker to send Operations to at the moment.
+func (m *Master) SelectWorker() *rpc.Client {
+	// TODO Implement selection logic
+	return m.Workers[0]
 }

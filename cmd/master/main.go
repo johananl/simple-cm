@@ -23,6 +23,7 @@ func main() {
 	m := master.Master{SSHKeysPath: "./ssh_keys"}
 
 	// Connect to DB
+	// TODO Read DB params from environment
 	session, err := m.ConnectToDB([]string{"127.0.0.1"}, "simplecm")
 	if err != nil {
 		log.Fatalf("could not connect to DB: %v", err)
@@ -33,10 +34,14 @@ func main() {
 	log.Printf("%d hosts retrieved from DB", len(hosts))
 
 	// Connect to workers
-	// TODO Read wiring params from environment
-	client, err := rpc.DialHTTP("tcp", "localhost:8888")
-	if err != nil {
-		log.Fatalf("error dialing: %v", err)
+	// TODO Read worker params from environment
+	workers := []string{"localhost:8888"}
+	for _, w := range workers {
+		c, err := rpc.DialHTTP("tcp", w)
+		if err != nil {
+			log.Printf("error dialing worker %v: %v", w, err)
+		}
+		m.Workers = append(m.Workers, c)
 	}
 
 	var wg sync.WaitGroup
@@ -62,6 +67,9 @@ func main() {
 				Operations: operations,
 			}
 			var out worker.ExecuteOutput
+
+			client := m.SelectWorker()
+
 			err = client.Call("Worker.Execute", in, &out)
 			if err != nil {
 				log.Printf("error executing operations: %v", err)
