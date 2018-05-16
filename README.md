@@ -10,7 +10,8 @@ The master communicates with the workers using [Go's RPC library][1]. This libra
 and is meant to be replaced by technologies such as [gRPC][2]. The library is suffering from
 problems such as no TLS support and therefore - cleartext communication over the wire. **However**,
 due to the requirement to use only standard library packages, `net/rpc` was chosen as it provides a
-simple RPC interface without having to build REST APIs etc.
+simple RPC interface that is more suitable to the task than, say, a REST API (because the
+application is operation-oriented rather than resource-oriented).
 
 [1]: https://golang.org/pkg/net/rpc/
 [2]: https://grpc.io/
