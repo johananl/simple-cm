@@ -12,5 +12,6 @@ RUN go build -o /tmp/worker
 FROM alpine
 
 COPY --from=builder /tmp/worker /worker
+COPY ./modules /etc/simple-cm/modules
 EXPOSE 8888
 CMD /worker

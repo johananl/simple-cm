@@ -21,7 +21,7 @@ func formatScriptOutput(s string) string {
 }
 
 func main() {
-	sshKeysPath := flag.String("ssh-keys-dir", ".", "Directory to look for SSH keys in")
+	sshKeysPath := flag.String("ssh-keys-dir", "/etc/simple-cm/keys", "Directory to look for SSH keys in")
 	dbHostsFlag := flag.String("db-hosts", "127.0.0.1", "A comma-separated list of DB nodes to connect to")
 	dbKeyspace := flag.String("db-keyspace", "simplecm", "Cassandra keyspace to use")
 	workersFlag := flag.String("workers", "127.0.0.1:8888", "A comma-separated list of workers to connect to, in a <host>:<port> format")
