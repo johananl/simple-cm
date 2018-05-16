@@ -28,19 +28,8 @@ func main() {
 		log.Fatalf("could not connect to DB: %v", err)
 	}
 
-	// Get all hosts
-	var hosts []ops.Host
-	var hostname, user, keyName string
-	q := `SELECT hostname, user, key_name FROM hosts`
-	iter := session.Query(q).Iter()
-	for iter.Scan(&hostname, &user, &keyName) {
-		hosts = append(hosts, ops.Host{
-			Hostname: hostname,
-			User:     user,
-			KeyName:  keyName,
-		})
-	}
-
+	// Read hosts from DB
+	hosts := m.GetAllHosts(session)
 	log.Printf("%d hosts retrieved from DB", len(hosts))
 
 	// Connect to workers
@@ -57,19 +46,7 @@ func main() {
 			defer wg.Done()
 
 			// Get operations for host
-			var operations []ops.Operation
-			var description, scriptName string
-			var attributes map[string]string
-			q := `SELECT description, script_name, attributes FROM operations where hostname = ?`
-			iter := session.Query(q, h.Hostname).Iter()
-			for iter.Scan(&description, &scriptName, &attributes) {
-				o := ops.Operation{
-					Description: description,
-					ScriptName:  scriptName,
-					Attributes:  attributes,
-				}
-				operations = append(operations, o)
-			}
+			operations := m.GetOperations(session, h.Hostname)
 
 			key, err := m.SSHKey(h.KeyName)
 			if err != nil {

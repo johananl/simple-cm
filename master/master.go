@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/gocql/gocql"
+	ops "github.com/johananl/simple-cm/operations"
 )
 
 // A Master coordinates Operations among Workers.
@@ -35,17 +36,38 @@ func (m *Master) SSHKey(key string) (string, error) {
 	return string(s), nil
 }
 
-// // GetAllHosts gets all the hosts from the DB and returns a slice of Hosts.
-// func (m *Master) GetAllHosts(sess *gocql.Session) []ops.Host {
-// 	var hosts []ops.Host
-// 	var hostname, user string
-// 	q := `SELECT hostname, user FROM hosts`
-// 	iter := sess.Query(q).Iter()
-// 	for iter.Scan(&hostname, &user) {
-// 		hosts = append(hosts, ops.Host{
-// 			Hostname: hostname,
-// 			User:     user,
-// 			Key:      []byte(key),
-// 		})
-// 	}
-// }
+// GetAllHosts gets all the hosts from the DB and returns a slice of Hosts.
+func (m *Master) GetAllHosts(session *gocql.Session) []ops.Host {
+	var hosts []ops.Host
+	var hostname, user, keyName string
+	q := `SELECT hostname, user, key_name FROM hosts`
+	iter := session.Query(q).Iter()
+	for iter.Scan(&hostname, &user, &keyName) {
+		hosts = append(hosts, ops.Host{
+			Hostname: hostname,
+			User:     user,
+			KeyName:  keyName,
+		})
+	}
+
+	return hosts
+}
+
+// GetOperations gets all operations for the given host from the DB and returns them in a slice.
+func (m *Master) GetOperations(session *gocql.Session, hostname string) []ops.Operation {
+	var operations []ops.Operation
+	var description, scriptName string
+	var attributes map[string]string
+	q := `SELECT description, script_name, attributes FROM operations where hostname = ?`
+	iter := session.Query(q, hostname).Iter()
+	for iter.Scan(&description, &scriptName, &attributes) {
+		o := ops.Operation{
+			Description: description,
+			ScriptName:  scriptName,
+			Attributes:  attributes,
+		}
+		operations = append(operations, o)
+	}
+
+	return operations
+}
