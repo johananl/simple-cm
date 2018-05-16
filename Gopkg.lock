@@ -3,6 +3,29 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/gocql/gocql"
+  packages = [
+    ".",
+    "internal/lru",
+    "internal/murmur",
+    "internal/streams"
+  ]
+  revision = "181004e14a3fb735efcc826a4256369d0c96747b"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/golang/snappy"
+  packages = ["."]
+  revision = "553a641470496b2327abcac10b36396bd98e45c9"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hailocab/go-hostpool"
+  packages = ["."]
+  revision = "e80d13ce29ede4452c43dea11e79b9bc8a15b478"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
   packages = [
     "curve25519",
@@ -14,9 +37,15 @@
   ]
   revision = "2d027ae1dddd4694d54f7a8b6cbe78dca8720226"
 
+[[projects]]
+  name = "gopkg.in/inf.v0"
+  packages = ["."]
+  revision = "d2d2541c53f18d2a059457998ce2876cc8e67cbf"
+  version = "v0.9.1"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ef14b21639fbe1b2016972804e34d4c886e5ce475d13a13bae107b2a7d8cb6f9"
+  inputs-digest = "f2c6eca9a0b947771a37b4d0642aa79262adfb1ff7e6bb4f7a23c71d95ac2a67"
   solver-name = "gps-cdcl"
   solver-version = 1
