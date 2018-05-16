@@ -12,8 +12,8 @@ import (
 
 // A Master coordinates Operations among Workers.
 type Master struct {
-	SSHKeysPath string
-	Workers     []*rpc.Client
+	SSHKeysDir string
+	Workers    []*rpc.Client
 }
 
 // ConnectToDB connects to the given DB and returns a *gocql.Session.
@@ -30,7 +30,7 @@ func (m *Master) ConnectToDB(hosts []string, keyspace string) (*gocql.Session, e
 
 // SSHKey gets the name of an SSH private key and returns its contents.
 func (m *Master) SSHKey(key string) (string, error) {
-	s, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", m.SSHKeysPath, key))
+	s, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", m.SSHKeysDir, key))
 	if err != nil {
 		log.Fatalf("error reading SSH key: %v", err)
 	}

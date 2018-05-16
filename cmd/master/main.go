@@ -1,9 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/rpc"
+	"strings"
 	"sync"
 
 	"github.com/johananl/simple-cm/master"
@@ -19,12 +21,19 @@ func formatScriptOutput(s string) string {
 }
 
 func main() {
+	sshKeysPath := flag.String("ssh-keys-dir", ".", "Directory to look for SSH keys in")
+	dbHostsFlag := flag.String("db-hosts", "127.0.0.1", "A comma-separated list of DB nodes to connect to")
+	dbKeyspace := flag.String("db-keyspace", "simplecm", "Cassandra keyspace to use")
+	workersFlag := flag.String("workers", "127.0.0.1:8888", "A comma-separated list of workers to connect to, in a <host>:<port> format")
+	flag.Parse()
+
 	// Init master
-	m := master.Master{SSHKeysPath: "./ssh_keys"}
+	m := master.Master{SSHKeysDir: *sshKeysPath}
 
 	// Connect to DB
-	// TODO Read DB params from environment
-	session, err := m.ConnectToDB([]string{"127.0.0.1"}, "simplecm")
+	dbHosts := strings.Split(*dbHostsFlag, ",")
+	log.Printf("Connecting to DB hosts %s", dbHosts)
+	session, err := m.ConnectToDB(dbHosts, *dbKeyspace)
 	if err != nil {
 		log.Fatalf("could not connect to DB: %v", err)
 	}
@@ -35,7 +44,7 @@ func main() {
 
 	// Connect to workers
 	// TODO Read worker params from environment
-	workers := []string{"localhost:8888"}
+	workers := strings.Split(*workersFlag, ",")
 	for _, w := range workers {
 		c, err := rpc.DialHTTP("tcp", w)
 		if err != nil {
