@@ -2,3 +2,9 @@ create keyspace if not exists simplecm with replication = { 'class' : 'SimpleStr
 create table if not exists simplecm.hosts(hostname text, user text, key_name text, PRIMARY KEY(hostname));
 create table if not exists simplecm.operations(hostname text, description text, script_name text, attributes map<text, text>, PRIMARY KEY(hostname, script_name));
 -- TODO Set primary keys properly
+
+insert into simplecm.hosts (hostname, user, key_name) values ('172.28.128.3', 'vagrant', 'private_key');
+insert into simplecm.operations (hostname, description, script_name, attributes)
+    values ('172.28.128.3', 'verify_test_file_exists', 'file_exists', {'path': '/tmp/test.txt'});
+insert into simplecm.operations (hostname, description, script_name, attributes)
+    values ('172.28.128.3', 'verify_test_file_contains_hello', 'file_contains', {'path': '/tmp/test.txt', 'text': 'hello'});
