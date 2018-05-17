@@ -1,0 +1,27 @@
+version: '3'
+services:
+  db:
+    image: cassandra
+    ports:
+      - "9042:9042"
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "SELECT now() FROM system.local;"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+  worker:
+    build:
+      context: .
+      dockerfile: ./docker/worker/Dockerfile
+    ports:
+      - "8888"
+  master:
+    depends_on:
+      - db
+      - worker
+    build:
+      context: .
+      dockerfile: ./docker/master/Dockerfile
+    command: /wait-for.sh db:9042 -- /master --db-hosts db --workers worker:8888
+    volumes:
+      - ./ssh_keys:/etc/simple-cm/keys

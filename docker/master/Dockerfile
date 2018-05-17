@@ -12,4 +12,5 @@ RUN go build -o /tmp/master
 FROM alpine
 
 COPY --from=builder /tmp/master /master
+COPY docker/wait-for.sh /wait-for.sh
 CMD /master
