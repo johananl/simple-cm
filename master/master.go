@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/rpc"
+	"sync"
 
 	"github.com/gocql/gocql"
 	ops "github.com/johananl/simple-cm/operations"
@@ -12,8 +13,10 @@ import (
 
 // A Master coordinates Operations among Workers.
 type Master struct {
-	SSHKeysDir string
-	Workers    []*rpc.Client
+	SSHKeysDir     string
+	Workers        []*rpc.Client
+	LastUsedWorker int
+	lock           sync.RWMutex
 }
 
 // ConnectToDB connects to the given DB and returns a *gocql.Session.
@@ -75,8 +78,22 @@ func (m *Master) GetOperations(session *gocql.Session, hostname string) []ops.Op
 	return operations
 }
 
-// SelectWorker returns the best worker to send Operations to at the moment.
+// SelectWorker returns workers using a simple round-robin algorithm.
 func (m *Master) SelectWorker() *rpc.Client {
-	// TODO Implement selection logic
-	return m.Workers[0]
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	if m.LastUsedWorker == len(m.Workers)-1 {
+		// Last used worker is the last one in the slice - start over from index 0
+		log.Println("Selected worker 0")
+		m.LastUsedWorker = 0
+		return m.Workers[0]
+	}
+
+	current := m.LastUsedWorker + 1
+	log.Printf("Selected worker %d", current)
+
+	m.LastUsedWorker++
+
+	return m.Workers[current]
 }
