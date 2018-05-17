@@ -1,9 +1,25 @@
-version: '3'
+version: '3.3'
 services:
   host1:
     image: arvindr226/alpine-ssh
     ports:
-      - "22:2221"
+      - "22"
+  host2:
+    image: arvindr226/alpine-ssh
+    ports:
+      - "22"
+  host3:
+    image: arvindr226/alpine-ssh
+    ports:
+      - "22"
+  host4:
+    image: arvindr226/alpine-ssh
+    ports:
+      - "22"
+  host5:
+    image: arvindr226/alpine-ssh
+    ports:
+      - "22"
   db:
     image: cassandra
     ports:
@@ -17,6 +33,10 @@ services:
   master:
     depends_on:
       - host1
+      - host2
+      - host3
+      - host4
+      - host5
       - db
       - worker
     build:
