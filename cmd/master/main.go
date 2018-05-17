@@ -43,8 +43,8 @@ func main() {
 	log.Printf("%d hosts retrieved from DB", len(hosts))
 
 	// Connect to workers
-	// TODO Read worker params from environment
 	workers := strings.Split(*workersFlag, ",")
+	log.Printf("Connecting to workers %s", workers)
 	for _, w := range workers {
 		c, err := rpc.DialHTTP("tcp", w)
 		if err != nil {
