@@ -1,14 +1,13 @@
 version: '3'
 services:
+  host1:
+    image: arvindr226/alpine-ssh
+    ports:
+      - "22:2221"
   db:
     image: cassandra
     ports:
       - "9042:9042"
-    healthcheck:
-      test: ["CMD", "cqlsh", "-e", "SELECT now() FROM system.local;"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
   worker:
     build:
       context: .
@@ -17,6 +16,7 @@ services:
       - "8888"
   master:
     depends_on:
+      - host1
       - db
       - worker
     build:
