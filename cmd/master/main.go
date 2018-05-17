@@ -62,17 +62,23 @@ func main() {
 			// Get operations for host
 			operations := m.GetOperations(session, h.Hostname)
 
-			key, err := m.SSHKey(h.KeyName)
-			if err != nil {
-				log.Printf("error reading SSH key for host %v: %v", h.Hostname, err)
-				// TODO Handle failure indications for all operaions
-				return
+			// Read SSH key only if configured
+			var key string
+			if h.KeyName != "" {
+				key, err = m.SSHKey(h.KeyName)
+				if err != nil {
+					log.Printf("error reading SSH key for host %v: %v", h.Hostname, err)
+					// TODO Handle failure indications for all operaions
+				}
+			} else {
+				key = ""
 			}
 
 			in := worker.ExecuteInput{
 				Hostname:   h.Hostname,
 				User:       h.User,
 				Key:        key,
+				Password:   h.Password,
 				Operations: operations,
 			}
 			var out worker.ExecuteOutput

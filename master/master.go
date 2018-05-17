@@ -41,14 +41,15 @@ func (m *Master) SSHKey(key string) (string, error) {
 // GetAllHosts gets all the hosts from the DB and returns a slice of Hosts.
 func (m *Master) GetAllHosts(session *gocql.Session) []ops.Host {
 	var hosts []ops.Host
-	var hostname, user, keyName string
-	q := `SELECT hostname, user, key_name FROM hosts`
+	var hostname, user, keyName, password string
+	q := `SELECT hostname, user, key_name, password FROM hosts`
 	iter := session.Query(q).Iter()
-	for iter.Scan(&hostname, &user, &keyName) {
+	for iter.Scan(&hostname, &user, &keyName, &password) {
 		hosts = append(hosts, ops.Host{
 			Hostname: hostname,
 			User:     user,
 			KeyName:  keyName,
+			Password: password,
 		})
 	}
 

@@ -16,7 +16,8 @@ type Host struct {
 	// This is highly unsecure and should not be used as-is in production. Possible solutions:
 	// - Encrypt the communication between master and worker.
 	// - Store the keys in a secure, reference the key name from master and have worker pull it.
-	KeyName string
+	KeyName  string
+	Password string
 }
 
 type Operation struct {

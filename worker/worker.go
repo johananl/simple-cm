@@ -15,13 +15,15 @@ type Worker struct {
 	ModulesDir string
 }
 
-// ExecuteInput represents the input to the Execute function. It the hostname, username and private
-// SSH key which should be used to connect to the remote host, as well as one or more operations to
-// be executed on it.
+// ExecuteInput represents the input to the Execute function. It contains the hostname to connect
+// to, the SSH username, an SSH password and/or an SSH key, and finally one or more operations to
+// be executed on the host.
+// If both an SSH key and a password are configured, the key will be preferred.
 type ExecuteInput struct {
 	Hostname   string
 	User       string
 	Key        string
+	Password   string
 	Operations []ops.Operation
 }
 
@@ -34,20 +36,28 @@ type ExecuteOutput struct {
 // Execute executes one or more Operations on a remote host.
 func (w *Worker) Execute(in *ExecuteInput, out *ExecuteOutput) error {
 	// Initialize SSH connection to remote host
-	k, err := parseKey([]byte(in.Key))
-	if err != nil {
-		return fmt.Errorf("could not parse SSH key: %v", err)
-	}
-
 	config := &ssh.ClientConfig{
 		User: in.User,
-		Auth: []ssh.AuthMethod{k},
+		Auth: []ssh.AuthMethod{},
 		// The following line prevents the need to manually approve each remote host as a known
 		// host. This, however, poses a security risk and a better mechanism should probably be
 		// used in production.
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         10 * time.Second,
 	}
+
+	// Set SSH auth method(s)
+	if in.Key != "" {
+		k, err := parseKey([]byte(in.Key))
+		if err != nil {
+			return fmt.Errorf("could not parse SSH key: %v", err)
+		}
+		config.Auth = append(config.Auth, k)
+	}
+	if in.Password != "" {
+		config.Auth = append(config.Auth, ssh.Password(in.Password))
+	}
+
 	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", in.Hostname), config)
 	if err != nil {
 		return fmt.Errorf("failed to dial: %v", err)
