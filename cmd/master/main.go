@@ -37,6 +37,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not connect to DB: %v", err)
 	}
+	defer session.Close()
 
 	// Read hosts from DB
 	hosts := m.GetAllHosts(session)
