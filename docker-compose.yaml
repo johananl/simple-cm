@@ -20,10 +20,23 @@ services:
     image: arvindr226/alpine-ssh
     ports:
       - "22"
-  db:
-    image: cassandra
+  db1:
+    image: scylladb/scylla
     ports:
-      - "9042:9042"
+      - "9042"
+    # Allow seeding DB using `docker-compose exec db1 cqlsh -e "SOURCE '/tmp/seed.cql'"`
+    volumes:
+      - ./db/seed.cql:/tmp/seed.cql
+  db2:
+    image: scylladb/scylla
+    ports:
+      - "9042"
+    command: --seeds db1
+  db3:
+    image: scylladb/scylla
+    ports:
+      - "9042"
+    command: --seeds db1
   worker1:
     build:
       context: .
@@ -49,13 +62,13 @@ services:
       - host3
       - host4
       - host5
-      - db
+      - db1
       - worker1
       - worker2
       - worker3
     build:
       context: .
       dockerfile: ./docker/master/Dockerfile
-    command: /wait-for.sh db:9042 -- /master --db-hosts db --workers worker1:8888,worker2:8888,worker3:8888
+    command: /wait-for.sh db1:9042 -- /master --db-hosts db1,db2,db3 --workers worker1:8888,worker2:8888,worker3:8888
     volumes:
       - ./ssh_keys:/etc/simple-cm/keys
