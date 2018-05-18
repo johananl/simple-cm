@@ -2,6 +2,29 @@
 
 This is an exercise and by no means a real-world tool.
 
+## Running
+
+Bring up the DB hosts:
+
+    docker-compose up -d db1 db2 db3
+
+Seed the DB with dummy data (might have to wait a few seconds for the cluster to initialize):
+
+    docker-compose exec db1 cqlsh -e "SOURCE '/tmp/seed.cql'"
+
+Bring up the dummy hosts:
+
+    docker-compose up -d host1 host2 host3 host4 host5
+
+Bring up the workers:
+
+    docker-compose up -d worker1 worker2 worker3
+
+Finally, run the master:
+
+    docker-compose up master
+
+
 ## Caveats, Limitations and Known Issues
 
 ### Master-Worker Communication
