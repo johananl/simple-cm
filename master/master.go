@@ -42,7 +42,7 @@ func (m *Master) SSHKey(key string) (string, error) {
 }
 
 // GetAllHosts gets all the hosts from the DB and returns a slice of Hosts.
-func (m *Master) GetAllHosts(session *gocql.Session) []ops.Host {
+func (m *Master) GetAllHosts(session *gocql.Session) ([]ops.Host, error) {
 	var hosts []ops.Host
 	var hostname, user, keyName, password string
 	q := `SELECT hostname, user, key_name, password FROM hosts`
@@ -55,12 +55,15 @@ func (m *Master) GetAllHosts(session *gocql.Session) []ops.Host {
 			Password: password,
 		})
 	}
+	if err := iter.Close(); err != nil {
+		return []ops.Host{}, fmt.Errorf("error getting hosts from DB: %v", err)
+	}
 
-	return hosts
+	return hosts, nil
 }
 
 // GetOperations gets all operations for the given host from the DB and returns them in a slice.
-func (m *Master) GetOperations(session *gocql.Session, hostname string) []ops.Operation {
+func (m *Master) GetOperations(session *gocql.Session, hostname string) ([]ops.Operation, error) {
 	var operations []ops.Operation
 	var description, scriptName string
 	var attributes map[string]string
@@ -74,8 +77,11 @@ func (m *Master) GetOperations(session *gocql.Session, hostname string) []ops.Op
 		}
 		operations = append(operations, o)
 	}
+	if err := iter.Close(); err != nil {
+		return []ops.Operation{}, fmt.Errorf("error getting operations from DB: %v", err)
+	}
 
-	return operations
+	return operations, nil
 }
 
 // SelectWorker returns workers using a simple round-robin algorithm.

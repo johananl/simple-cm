@@ -35,12 +35,16 @@ func main() {
 	log.Printf("Connecting to DB hosts %s", dbHosts)
 	session, err := m.ConnectToDB(dbHosts, *dbKeyspace)
 	if err != nil {
-		log.Fatalf("could not connect to DB: %v", err)
+		log.Fatalf("Could not connect to DB: %v", err)
 	}
 	defer session.Close()
 
 	// Read hosts from DB
-	hosts := m.GetAllHosts(session)
+	hosts, err := m.GetAllHosts(session)
+	if err != nil {
+		log.Fatalf("Could not get hosts from DB: %v", err)
+	}
+
 	log.Printf("%d hosts retrieved from DB", len(hosts))
 
 	// Connect to workers
@@ -49,7 +53,7 @@ func main() {
 	for _, w := range workers {
 		c, err := rpc.DialHTTP("tcp", w)
 		if err != nil {
-			log.Printf("error dialing worker %v: %v", w, err)
+			log.Printf("Error dialing worker %v: %v", w, err)
 		}
 		m.Workers = append(m.Workers, c)
 	}
@@ -61,14 +65,19 @@ func main() {
 			defer wg.Done()
 
 			// Get operations for host
-			operations := m.GetOperations(session, h.Hostname)
+			operations, err := m.GetOperations(session, h.Hostname)
+			if err != nil {
+				log.Fatalf("Could not get operations for host %s from DB: %v", h.Hostname, err)
+			}
+
+			log.Printf("Retrieved %d operations for host %s", len(operations), h.Hostname)
 
 			// Read SSH key only if configured
 			var key string
 			if h.KeyName != "" {
 				key, err = m.SSHKey(h.KeyName)
 				if err != nil {
-					log.Printf("error reading SSH key for host %v: %v", h.Hostname, err)
+					log.Printf("Error reading SSH key for host %v: %v", h.Hostname, err)
 					// TODO Handle failure indications for all operaions
 				}
 			} else {
@@ -88,7 +97,7 @@ func main() {
 
 			err = client.Call("Worker.Execute", in, &out)
 			if err != nil {
-				log.Printf("error executing operations: %v", err)
+				log.Printf("Error executing operations: %v", err)
 			}
 
 			// Analyze results
