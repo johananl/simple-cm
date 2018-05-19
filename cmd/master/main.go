@@ -42,7 +42,7 @@ func main() {
 	defer session.Close()
 
 	// Read hosts from DB
-	hosts, err := m.GetAllHosts(session)
+	hosts, err := m.GetHosts(session)
 	if err != nil {
 		log.Fatalf("Could not get hosts from DB: %v", err)
 	}

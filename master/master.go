@@ -43,7 +43,7 @@ func (m *Master) SSHKey(key string) (string, error) {
 }
 
 // GetAllHosts gets all the hosts from the DB and returns a slice of Hosts.
-func (m *Master) GetAllHosts(session *gocql.Session) ([]ops.Host, error) {
+func (m *Master) GetHosts(session *gocql.Session) ([]ops.Host, error) {
 	var hosts []ops.Host
 	var hostname, user, keyName, password string
 	q := `SELECT hostname, user, key_name, password FROM hosts`
