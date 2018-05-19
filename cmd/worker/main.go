@@ -20,6 +20,8 @@ func main() {
 	port := flag.String("port", "8888", "TCP port to listen on")
 	flag.Parse()
 
+	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Lmicroseconds)
+
 	// Initialize RPC server
 	w := worker.Worker{ModulesDir: *modulesDir}
 	rpc.Register(&w)

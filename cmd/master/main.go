@@ -29,6 +29,8 @@ func main() {
 	workersFlag := flag.String("workers", "127.0.0.1:8888", "A comma-separated list of workers to connect to, in a <host>:<port> format")
 	flag.Parse()
 
+	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Lmicroseconds)
+
 	// Init master
 	m := master.Master{SSHKeysDir: *sshKeysPath}
 
