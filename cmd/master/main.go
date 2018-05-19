@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/gocql/gocql"
+
 	"github.com/johananl/simple-cm/master"
 	ops "github.com/johananl/simple-cm/operations"
 	"github.com/johananl/simple-cm/worker"
@@ -56,6 +58,13 @@ func main() {
 			log.Printf("Error dialing worker %v: %v", w, err)
 		}
 		m.Workers = append(m.Workers, c)
+	}
+
+	// Store new run in DB
+	runID := gocql.TimeUUID()
+	err = m.StoreRun(session, runID)
+	if err != nil {
+		log.Fatalf("Could not store run in DB: %v", err)
 	}
 
 	var wg sync.WaitGroup

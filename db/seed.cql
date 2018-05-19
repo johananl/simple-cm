@@ -2,6 +2,9 @@ create keyspace if not exists simplecm with replication = { 'class' : 'SimpleStr
 create table if not exists simplecm.hosts(hostname text, user text, key_name text, password text, PRIMARY KEY(hostname));
 create table if not exists simplecm.operations_by_hostname(hostname text, description text, script_name text, attributes map<text, text>, PRIMARY KEY(hostname, script_name));
 
+-- Satisfies query: "get a run by its ID". Create time is defined as a clustering key to allow easy retrievals of runs for a given time frame.
+create table if not exists simplecm.runs(id UUID, create_time timestamp, primary key(id, create_time));
+
 insert into simplecm.hosts (hostname, user, key_name, password) values ('host1', 'root', '', 'root');
 insert into simplecm.hosts (hostname, user, key_name, password) values ('host2', 'root', '', 'root');
 insert into simplecm.hosts (hostname, user, key_name, password) values ('host3', 'root', '', 'root');

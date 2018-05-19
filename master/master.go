@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/rpc"
 	"sync"
+	"time"
 
 	"github.com/gocql/gocql"
 	ops "github.com/johananl/simple-cm/operations"
@@ -103,3 +104,14 @@ func (m *Master) SelectWorker() *rpc.Client {
 
 	return m.Workers[current]
 }
+
+// StoreRun stores a new run in the DB.
+func (m *Master) StoreRun(session *gocql.Session, id gocql.UUID) error {
+	log.Printf("Saving new run %s to DB", id.String())
+	q := `INSERT INTO runs (id, create_time) values (?, ?)`
+	if err := session.Query(q, id, time.Now()).Exec(); err != nil {
+		return fmt.Errorf("error storing run in DB: %v", err)
+	}
+	return nil
+}
+
