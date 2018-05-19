@@ -1,0 +1,13 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: master
+spec:
+  template:
+    spec:
+      containers:
+      - name: master
+        image: quay.io/jlieb/simple-cm-master
+        command: ["/wait-for.sh", "db:9042", "--", "/master", "--db-hosts", "db", "--workers", "workers:8888"]
+      restartPolicy: Never
+  backoffLimit: 4
