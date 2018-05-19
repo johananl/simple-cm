@@ -56,6 +56,7 @@ func main() {
 		c, err := rpc.DialHTTP("tcp", w)
 		if err != nil {
 			log.Printf("Error dialing worker %v: %v", w, err)
+			continue
 		}
 		m.Workers = append(m.Workers, c)
 	}
@@ -102,7 +103,10 @@ func main() {
 			}
 			var out worker.ExecuteOutput
 
-			client := m.SelectWorker()
+			client, err := m.SelectWorker()
+			if err != nil {
+				log.Fatalf("Could not select worker: %v", err)
+			}
 
 			err = client.Call("Worker.Execute", in, &out)
 			if err != nil {

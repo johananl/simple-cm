@@ -1,6 +1,7 @@
 package master
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -90,23 +91,27 @@ func (m *Master) GetOperations(session *gocql.Session, hostname string) ([]ops.O
 // NOTE: More sophisticated algorithms could of course be used to select workers. Round-robin is a
 // very simple one. A "policy" argument could be added to this method where the caller could
 // specify which policy they want to use for distributing the load across multiple workers.
-func (m *Master) SelectWorker() *rpc.Client {
+func (m *Master) SelectWorker() (*rpc.Client, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
+
+	if len(m.Workers) == 0 {
+		return nil, errors.New("no workers connected")
+	}
 
 	if m.LastUsedWorker == len(m.Workers)-1 {
 		// Last used worker is the last one in the slice - start over from index 0
 		log.Println("Selected worker 0")
 		m.LastUsedWorker = 0
-		return m.Workers[0]
+		return m.Workers[0], nil
 	}
 
-	current := m.LastUsedWorker + 1
-	log.Printf("Selected worker %d", current)
+	selected := m.LastUsedWorker + 1
+	log.Printf("Selected worker %d", selected)
 
 	m.LastUsedWorker++
 
-	return m.Workers[current]
+	return m.Workers[selected], nil
 }
 
 // StoreRun stores a new run in the DB.
