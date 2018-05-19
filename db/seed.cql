@@ -12,6 +12,7 @@ create table if not exists simplecm.runs(id UUID, create_time timestamp, primary
 -- Satisfies query: "get all results for a run".
 create table if not exists simplecm.results_by_run_id(id UUID, run_id UUID, hostname text, ts timestamp, script_name text, successful boolean, primary key(run_id, id));
 -- Satisfies query: "get all results for a run and a hostname".
+-- TODO Do we need both results tables?
 create table if not exists simplecm.results_by_run_id_and_hostname(id UUID, run_id UUID, hostname text, ts timestamp, script_name text, successful boolean, primary key(run_id, hostname, id));
 
 insert into simplecm.hosts (hostname, user, key_name, password) values ('host1', 'root', '', 'root');
