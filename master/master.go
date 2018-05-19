@@ -68,7 +68,7 @@ func (m *Master) GetOperations(session *gocql.Session, hostname string) ([]ops.O
 	var operations []ops.Operation
 	var description, scriptName string
 	var attributes map[string]string
-	q := `SELECT description, script_name, attributes FROM operations_by_hostname where hostname = ?`
+	q := `SELECT description, script_name, attributes FROM operations where hostname = ?`
 	iter := session.Query(q, hostname).Iter()
 	for iter.Scan(&description, &scriptName, &attributes) {
 		o := ops.Operation{

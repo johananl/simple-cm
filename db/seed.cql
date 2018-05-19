@@ -1,6 +1,8 @@
 create keyspace if not exists simplecm with replication = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
 create table if not exists simplecm.hosts(hostname text, user text, key_name text, password text, PRIMARY KEY(hostname));
-create table if not exists simplecm.operations_by_hostname(hostname text, description text, script_name text, attributes map<text, text>, PRIMARY KEY(hostname, script_name));
+
+-- Satisfies query: "get all operations for a hostname". An ID is added for row uniqueness since we could have more than one operation for the same hostname.
+create table if not exists simplecm.operations(id UUID, hostname text, description text, script_name text, attributes map<text, text>, primary key(hostname, id));
 
 -- Satisfies query: "get a run by its ID". Create time is defined as a clustering key to allow easy retrievals of runs for a given time frame.
 create table if not exists simplecm.runs(id UUID, create_time timestamp, primary key(id, create_time));
@@ -16,17 +18,18 @@ insert into simplecm.hosts (hostname, user, key_name, password) values ('host3',
 insert into simplecm.hosts (hostname, user, key_name, password) values ('host4', 'root', '', 'root');
 insert into simplecm.hosts (hostname, user, key_name, password) values ('host5', 'root', '', 'root');
 
-insert into simplecm.operations_by_hostname (hostname, description, script_name, attributes) values ('host1', 'verify_test_file_exists', 'file_exists', {'path': '/etc/hosts'});
-insert into simplecm.operations_by_hostname (hostname, description, script_name, attributes) values ('host1', 'verify_test_file_contains_1.1.1.1', 'file_contains', {'path': '/etc/hosts', 'text': '1.1.1.1 cloudflare-dns'});
+insert into simplecm.operations (id, hostname, description, script_name, attributes) values (uuid(), 'host1', 'verify_test_file_exists', 'file_exists', {'path': '/etc/passwd'});
+insert into simplecm.operations (id, hostname, description, script_name, attributes) values (uuid(), 'host1', 'verify_test_file_contains_1.1.1.1', 'file_contains', {'path': '/etc/hosts', 'text': '1.1.1.1 cloudflare-dns'});
 
-insert into simplecm.operations_by_hostname (hostname, description, script_name, attributes) values ('host2', 'verify_test_file_exists', 'file_exists', {'path': '/etc/hosts'});
-insert into simplecm.operations_by_hostname (hostname, description, script_name, attributes) values ('host2', 'verify_test_file_contains_1.1.1.1', 'file_contains', {'path': '/etc/hosts', 'text': '1.1.1.1 cloudflare-dns'});
+insert into simplecm.operations (id, hostname, description, script_name, attributes) values (uuid(), 'host2', 'verify_test_file_exists', 'file_exists', {'path': '/etc/passwd'});
+insert into simplecm.operations (id, hostname, description, script_name, attributes) values (uuid(), 'host2', 'verify_test_file_contains_1.1.1.1', 'file_contains', {'path': '/etc/hosts', 'text': '1.1.1.1 cloudflare-dns'});
 
-insert into simplecm.operations_by_hostname (hostname, description, script_name, attributes) values ('host3', 'verify_test_file_exists', 'file_exists', {'path': '/etc/hosts'});
-insert into simplecm.operations_by_hostname (hostname, description, script_name, attributes) values ('host3', 'verify_test_file_contains_1.1.1.1', 'file_contains', {'path': '/etc/hosts', 'text': '1.1.1.1 cloudflare-dns'});
+insert into simplecm.operations (id, hostname, description, script_name, attributes) values (uuid(), 'host3', 'verify_test_file_exists', 'file_exists', {'path': '/etc/passwd'});
+insert into simplecm.operations (id, hostname, description, script_name, attributes) values (uuid(), 'host3', 'verify_test_file_contains_1.1.1.1', 'file_contains', {'path': '/etc/hosts', 'text': '1.1.1.1 cloudflare-dns'});
 
-insert into simplecm.operations_by_hostname (hostname, description, script_name, attributes) values ('host4', 'verify_test_file_exists', 'file_exists', {'path': '/etc/hosts'});
-insert into simplecm.operations_by_hostname (hostname, description, script_name, attributes) values ('host4', 'verify_test_file_contains_1.1.1.1', 'file_contains', {'path': '/etc/hosts', 'text': '1.1.1.1 cloudflare-dns'});
+insert into simplecm.operations (id, hostname, description, script_name, attributes) values (uuid(), 'host4', 'verify_test_file_exists', 'file_exists', {'path': '/etc/passwd'});
+insert into simplecm.operations (id, hostname, description, script_name, attributes) values (uuid(), 'host4', 'verify_test_file_contains_1.1.1.1', 'file_contains', {'path': '/etc/hosts', 'text': '1.1.1.1 cloudflare-dns'});
 
-insert into simplecm.operations_by_hostname (hostname, description, script_name, attributes) values ('host5', 'verify_test_file_exists', 'file_exists', {'path': '/etc/hosts'});
-insert into simplecm.operations_by_hostname (hostname, description, script_name, attributes) values ('host5', 'verify_test_file_contains_1.1.1.1', 'file_contains', {'path': '/etc/hosts', 'text': '1.1.1.1 cloudflare-dns'});
+insert into simplecm.operations (id, hostname, description, script_name, attributes) values (uuid(), 'host5', 'verify_test_file_exists', 'file_exists', {'path': '/etc/passwd'});
+insert into simplecm.operations (id, hostname, description, script_name, attributes) values (uuid(), 'host5', 'verify_test_file_exists', 'file_exists', {'path': '/etc/inittab'});
+insert into simplecm.operations (id, hostname, description, script_name, attributes) values (uuid(), 'host5', 'verify_test_file_contains_1.1.1.1', 'file_contains', {'path': '/etc/hosts', 'text': '1.1.1.1 cloudflare-dns'});
