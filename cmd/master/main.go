@@ -110,6 +110,7 @@ func main() {
 				log.Fatalf("Could not select worker: %v", err)
 			}
 
+			// TODO Call RPC asynchronously?
 			err = client.Call("Worker.Execute", in, &out)
 			if err != nil {
 				log.Printf("Error executing operations: %v", err)
