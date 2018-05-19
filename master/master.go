@@ -86,6 +86,10 @@ func (m *Master) GetOperations(session *gocql.Session, hostname string) ([]ops.O
 }
 
 // SelectWorker returns workers using a simple round-robin algorithm.
+//
+// NOTE: More sophisticated algorithms could of course be used to select workers. Round-robin is a
+// very simple one. A "policy" argument could be added to this method where the caller could
+// specify which policy they want to use for distributing the load across multiple workers.
 func (m *Master) SelectWorker() *rpc.Client {
 	m.lock.Lock()
 	defer m.lock.Unlock()
