@@ -125,20 +125,23 @@ func (m *Master) StoreRun(session *gocql.Session, id gocql.UUID) error {
 }
 
 // StoreResults stores the results of a run in the DB.
+// TODO Store stdout and stderr in DB.
 func (m *Master) StoreResults(session *gocql.Session, runID gocql.UUID, hostname string, results []ops.OperationResult) error {
 	log.Printf("Saving %d results for host %s to DB", len(results), hostname)
 	for _, r := range results {
 		// Insert result atomically to two tables
 		b := session.NewBatch(gocql.UnloggedBatch)
 
+		now := time.Now()
+
 		q1 := `INSERT INTO results_by_run_id (id, run_id, hostname, ts, script_name, successful)
 			values (uuid(), ?, ?, ?, ?, ?)`
-		b.Query(q1, runID, hostname, time.Now(), r.Operation.ScriptName, r.Successful)
+		b.Query(q1, runID, hostname, now, r.Operation.ScriptName, r.Successful)
 
 		q2 := `INSERT INTO results_by_run_id_and_hostname
 			(id, run_id, hostname, ts, script_name, successful)
 			values (uuid(), ?, ?, ?, ?, ?)`
-		b.Query(q2, runID, hostname, time.Now(), r.Operation.ScriptName, r.Successful)
+		b.Query(q2, runID, hostname, now, r.Operation.ScriptName, r.Successful)
 
 		if err := session.ExecuteBatch(b); err != nil {
 			return fmt.Errorf("error storing results in DB: %v", err)
