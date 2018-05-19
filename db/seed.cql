@@ -1,5 +1,7 @@
 create keyspace if not exists simplecm with replication = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
-create table if not exists simplecm.hosts(hostname text, user text, key_name text, password text, PRIMARY KEY(hostname));
+
+-- Satisfies query: "get a host by hostname". Hostnames are unique.
+create table if not exists simplecm.hosts(hostname text, user text, key_name text, password text, primary key(hostname));
 
 -- Satisfies query: "get all operations for a hostname". An ID is added for row uniqueness since we could have more than one operation for the same hostname.
 create table if not exists simplecm.operations(id UUID, hostname text, description text, script_name text, attributes map<text, text>, primary key(hostname, id));
