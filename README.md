@@ -14,6 +14,8 @@ maintained by the Go community but is not part of the core standard library.
 
 ## Design
 
+![architecture](images/architecture.png)
+
 ### General
 
 The high-level design of the system uses **agent-less push mode** configuration management. This
