@@ -109,6 +109,12 @@ func main() {
 				log.Printf("Error executing operations: %v", err)
 			}
 
+			// Store results in DB
+			err = m.StoreResults(session, runID, h.Hostname, out.Results)
+			if err != nil {
+				log.Printf("Could not store results in DB: %v", err)
+			}
+
 			// Analyze results
 			var good, bad []ops.OperationResult
 			for _, i := range out.Results {

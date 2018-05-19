@@ -5,6 +5,11 @@ create table if not exists simplecm.operations_by_hostname(hostname text, descri
 -- Satisfies query: "get a run by its ID". Create time is defined as a clustering key to allow easy retrievals of runs for a given time frame.
 create table if not exists simplecm.runs(id UUID, create_time timestamp, primary key(id, create_time));
 
+-- Satisfies query: "get all results for a run".
+create table if not exists simplecm.results_by_run_id(id UUID, run_id UUID, hostname text, ts timestamp, script_name text, successful boolean, primary key(run_id, id));
+-- Satisfies query: "get all results for a run and a hostname".
+create table if not exists simplecm.results_by_run_id_and_hostname(id UUID, run_id UUID, hostname text, ts timestamp, script_name text, successful boolean, primary key(run_id, hostname, id));
+
 insert into simplecm.hosts (hostname, user, key_name, password) values ('host1', 'root', '', 'root');
 insert into simplecm.hosts (hostname, user, key_name, password) values ('host2', 'root', '', 'root');
 insert into simplecm.hosts (hostname, user, key_name, password) values ('host3', 'root', '', 'root');
