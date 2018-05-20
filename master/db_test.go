@@ -1,101 +1,63 @@
 package master
 
 import (
+	"log"
 	"testing"
 )
 
-const (
-	maxDBConnectionAttempts  = 2
-	dbReconnectSleepInterval = 3
-)
+var m Master
+var keyspace string
+var dbHosts []string
+
+func init() {
+	m = Master{}
+	keyspace = "simplecm"
+	dbHosts = []string{"127.0.0.1"}
+}
 
 func TestConnectToDB(t *testing.T) {
-	m := Master{}
+	// m := Master{}
 
-	_, err := m.ConnectToDB([]string{"127.0.0.1"}, "simplecm")
+	_, err := m.ConnectToDB(dbHosts, keyspace)
 	if err != nil {
 		t.Fatalf("Error connecting to test DB: %v", err)
 	}
 }
 
-// Starts a DB container to be used by the tests
-// func setupDB() (string, error) {
-// 	// Start test DB
-// 	log.Printf("Starting DB container")
-// 	cmd := exec.Command("docker", "run", "-d", "--rm", "-p", "9042:9042", "cassandra")
-// 	time.Sleep(1 * time.Second)
+func TestGetHosts(t *testing.T) {
+	session, err := m.ConnectToDB(dbHosts, keyspace)
+	if err != nil {
+		t.Fatalf("Error connecting to test DB: %v", err)
+	}
 
-// 	var stdOut, stdErr bytes.Buffer
+	// Insert dummy hosts to DB
+	q := `create table hosts(hostname text, user text, key_name text, password text, primary key(hostname));`
+	if err := session.Query(q).Exec(); err != nil {
+		t.Fatalf("Error creating hosts table: %v", err)
+	}
+	q = `insert into hosts (hostname, user, key_name, password) values ('testhost', 'testuser', '', 'testpass');`
+	if err := session.Query(q).Exec(); err != nil {
+		t.Fatalf("Error inserting dummy hosts: %v", err)
+	}
 
-// 	cmd.Stdout = &stdOut
-// 	cmd.Stderr = &stdErr
-// 	err := cmd.Run()
-// 	if err != nil {
-// 		return "", fmt.Errorf("error starting test DB: %v\nstdout: %s\nstderr: %s", err, string(stdOut.Bytes()), string(stdErr.Bytes()))
-// 	}
+	// Run test
+	hosts, err := m.GetHosts(session)
+	if err != nil {
+		t.Fatalf("Error getting hosts: %v", err)
+	}
 
-// 	cID := string(stdOut.Bytes())
-// 	log.Printf("Test DB running in container %s", cID)
+	// Verify
+	if len(hosts) != 1 {
+		log.Fatalf("Wrong number of hosts returned: got %d want %d", len(hosts), 1)
+	}
 
-// 	// Verify DB connectivity
-// 	m := Master{}
-
-// 	for i := 0; i < maxDBConnectionAttempts; i++ {
-// 		_, err = m.ConnectToDB([]string{"127.0.0.1"}, "simplecm")
-// 		if err != nil {
-// 			log.Printf("DB connection attempt %d failed - retrying...", i+1)
-// 			time.Sleep(dbReconnectSleepInterval * time.Second)
-// 			continue
-// 		}
-// 		break
-// 	}
-
-// 	if err != nil {
-// 		return cID, fmt.Errorf("error connecting to test DB: %v", err)
-// 	}
-
-// 	return cID, nil
-// }
-
-// Stops the DB container used by the tests
-// func teardownDB(containerID string) error {
-// 	// Stop test DB
-// 	log.Printf("Stopping DB container %s", containerID)
-// 	cmd := exec.Command("docker", "stop", containerID)
-
-// 	var stdOut, stdErr bytes.Buffer
-// 	cmd.Stdout = &stdOut
-// 	cmd.Stderr = &stdErr
-// 	err := cmd.Run()
-// 	if err != nil {
-// 		return fmt.Errorf("error stopping test DB: %v\nstdout: %s\nstderr: %s", err, string(stdOut.Bytes()), string(stdErr.Bytes()))
-// 	}
-
-// 	return nil
-// }
-
-// func TestMain(m *testing.M) {
-// 	// Setup
-// 	cID, err := setupDB()
-// 	if err != nil {
-// 		log.Printf("Error while setting up test DB: %v", err)
-// 		if cID != "" {
-// 			err = teardownDB(cID)
-// 			if err != nil {
-// 				log.Printf("Could not stop test DB: %v", err)
-// 			}
-// 		}
-// 		os.Exit(1)
-// 	}
-
-// 	// Run tests
-// 	retCode := m.Run()
-
-// 	// Teardown
-// 	err = teardownDB(cID)
-// 	if err != nil {
-// 		log.Printf("Could not stop test DB: %v", err)
-// 	}
-
-// 	os.Exit(retCode)
-// }
+	if hosts[0].Hostname != "testhost" {
+		t.Fatalf("Wrong hostname retrieved: got %s want %s", hosts[0].Hostname, "testhost")
+	}
+	if hosts[0].User != "testuser" {
+		t.Fatalf("Wrong user retrieved: got %s want %s", hosts[0].User, "testuser")
+	}
+	if hosts[0].Password != "testpass" {
+		t.Fatalf("Wrong password retrieved: got %s want %s", hosts[0].Password, "testpass")
+	}
+}
