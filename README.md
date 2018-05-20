@@ -65,9 +65,9 @@ master.
 ### Modules and Extensibility
 
 The system can run any operation that can be described using a shell script. This allows a lot of
-flexibility when defining new types of operations, or *modules*. Two sample modules were included
-in the [modules][6] directory: `file_exists` and `file_contains`. To add new modules, simply add
-new scripts to the directory that is referenced by the `--modules-dir` argument of the workers
+flexibility when defining new types of operations, or *modules*. A few sample modules were included
+in the [modules][6] directory such as `file_exists` and `file_contains`. To add new modules, simply
+add new scripts to the directory that is referenced by the `--modules-dir` argument of the workers
 (default is `/etc/simple-cm/modules`).
 
 Operations typically require *attributes* which allow the user to control the operation's behavior.
@@ -79,8 +79,13 @@ An sample module:
 
     #!/bin/bash
 
-    if ! grep -q "{{.text}}" {{.path}}; then
-        echo "{{.text}}" >> {{.path}}
+    if [ -f {{.path}} ]; then
+        if ! grep -q "{{.text}}" {{.path}}; then
+            echo "{{.text}}" >> {{.path}}
+        fi
+    else
+        echo "File {{.path}} does not exist"
+        exit 1
     fi
 
 This template expects `.text` and `.path` to be interpolated. The rendered script will then check
