@@ -23,6 +23,7 @@ func formatScriptOutput(s string) string {
 }
 
 func main() {
+	concurrency := flag.Int("c", 10, "Specify the maximum number of concurrent host connections")
 	sshKeysPath := flag.String("ssh-keys-dir", "/etc/simple-cm/keys", "Directory to look for SSH keys in")
 	dbHostsFlag := flag.String("db-hosts", "127.0.0.1", "A comma-separated list of DB nodes to connect to")
 	dbKeyspace := flag.String("db-keyspace", "simplecm", "Cassandra keyspace to use")
@@ -70,58 +71,66 @@ func main() {
 		log.Fatalf("Could not store run in DB: %v", err)
 	}
 
+	// Process multiple hosts in parallel
+	log.Printf("Executing operations on a maximum of %d hosts in parallel", *concurrency)
+	sem := make(chan struct{}, *concurrency)
 	var wg sync.WaitGroup
 	for _, h := range hosts {
+		// Acquire semaphore slot
+		sem <- struct{}{}
 		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		go func(host ops.Host) {
+			defer func() {
+				// Release semaphore slot
+				<-sem
+				wg.Done()
+			}()
 
 			// Get operations for host
-			operations, err := m.GetOperations(session, h.Hostname)
+			operations, err := m.GetOperations(session, host.Hostname)
 			if err != nil {
-				log.Printf("[%s] Could not get operations from DB: %v", h.Hostname, err)
+				log.Printf("[%s] Could not get operations from DB: %v", host.Hostname, err)
 				return
 			}
 
-			log.Printf("[%s] Retrieved %d operations", h.Hostname, len(operations))
+			log.Printf("[%s] Retrieved %d operations", host.Hostname, len(operations))
 
 			// Read SSH key only if configured
 			key := ""
-			if h.KeyName != "" {
-				key, err = m.SSHKey(h.KeyName)
+			if host.KeyName != "" {
+				key, err = m.SSHKey(host.KeyName)
 				if err != nil {
-					log.Printf("[%s] Error reading SSH key: %v", h.Hostname, err)
+					log.Printf("[%s] Error reading SSH key: %v", host.Hostname, err)
 					// Not returning here because we might still be able to log in with a password.
 				}
 			}
 
 			// Execute operations
 			in := worker.ExecuteInput{
-				Hostname:   h.Hostname,
-				User:       h.User,
+				Hostname:   host.Hostname,
+				User:       host.User,
 				Key:        key,
-				Password:   h.Password,
+				Password:   host.Password,
 				Operations: operations,
 			}
 			var out worker.ExecuteOutput
 
 			client, err := m.SelectWorker()
 			if err != nil {
-				log.Printf("[%s] Could not select worker: %v", h.Hostname, err)
+				log.Printf("[%s] Could not select worker: %v", host.Hostname, err)
 				return
 			}
 
-			// TODO Call RPC asynchronously?
 			err = client.Call("Worker.Execute", in, &out)
 			if err != nil {
-				log.Printf("[%s] Error executing operations: %v", h.Hostname, err)
+				log.Printf("[%s] Error executing operations: %v", host.Hostname, err)
 				return
 			}
 
 			// Store results in DB
-			err = m.StoreResults(session, runID, h.Hostname, out.Results)
+			err = m.StoreResults(session, runID, host.Hostname, out.Results)
 			if err != nil {
-				log.Printf("[%s] Could not store results in DB: %v", h.Hostname, err)
+				log.Printf("[%s] Could not store results in DB: %v", host.Hostname, err)
 			}
 
 			// Analyze results
@@ -136,7 +145,7 @@ func main() {
 
 			// TODO Set colors for success / fail
 			if len(good) > 0 {
-				s := fmt.Sprintf("[%s] Completed operations:\n", h.Hostname)
+				s := fmt.Sprintf("[%s] Completed operations:\n", host.Hostname)
 				for _, i := range good {
 					s = s + fmt.Sprintf("* %s\n", i.Operation.Description)
 					if i.StdOut != "" {
@@ -150,7 +159,7 @@ func main() {
 			}
 
 			if len(bad) > 0 {
-				s := fmt.Sprintf("[%s] Failed operations:\n", h.Hostname)
+				s := fmt.Sprintf("[%s] Failed operations:\n", host.Hostname)
 				for _, i := range bad {
 					s = s + fmt.Sprintf("* %s\n", i.Operation.Description)
 					if i.StdOut != "" {
@@ -162,7 +171,7 @@ func main() {
 				}
 				log.Print(s)
 			}
-		}()
-		wg.Wait()
+		}(h)
 	}
+	wg.Wait()
 }
