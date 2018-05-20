@@ -149,10 +149,11 @@ likely to work as well, though these haven't been tested.
 The following enhancements can, and probably should, be done in order to make the system more
 scalable, stable and secure.
 
+- Create a UI for managing operations (at the moment things need to be created manually in the DB).
+- Make master an always-on service and implement a client to submit runs, query their status etc.
 - Support multiple masters. This could greatly increase the maximum scale of the system.
 - Use an encrypted transport protocol for master-worker communication.
 - Paging of results from the database.
-- Make master an always-on service and implement a client to submit runs, query their status etc.
 - Handle worker disconnections.
 
 [1]: https://golang.org/pkg/net/rpc/
