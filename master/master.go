@@ -116,7 +116,7 @@ func (m *Master) SelectWorker() (*rpc.Client, error) {
 
 // StoreRun stores a new run in the DB.
 func (m *Master) StoreRun(session *gocql.Session, id gocql.UUID) error {
-	log.Printf("Saving new run %s to DB", id.String())
+	log.Printf("Saving new run '%s' to DB", id.String())
 	q := `INSERT INTO runs (id, create_time) values (?, ?)`
 	if err := session.Query(q, id, time.Now()).Exec(); err != nil {
 		return fmt.Errorf("error storing run in DB: %v", err)
@@ -127,7 +127,7 @@ func (m *Master) StoreRun(session *gocql.Session, id gocql.UUID) error {
 // StoreResults stores the results of a run in the DB.
 // TODO Store stdout and stderr in DB.
 func (m *Master) StoreResults(session *gocql.Session, runID gocql.UUID, hostname string, results []ops.OperationResult) error {
-	log.Printf("Saving %d results for host %s to DB", len(results), hostname)
+	log.Printf("Saving %d results for host '%s' to DB", len(results), hostname)
 	for _, r := range results {
 		// Insert result atomically to two tables
 		b := session.NewBatch(gocql.UnloggedBatch)
