@@ -18,7 +18,7 @@ import (
 // Formats a script's output for visual clarity.
 func formatScriptOutput(s string) string {
 	return "===================================================================\n" +
-		s + "\n" +
+		s +
 		"===================================================================\n"
 }
 
@@ -79,23 +79,23 @@ func main() {
 			// Get operations for host
 			operations, err := m.GetOperations(session, h.Hostname)
 			if err != nil {
-				log.Fatalf("Could not get operations for host %s from DB: %v", h.Hostname, err)
+				log.Printf("[%s] Could not get operations from DB: %v", h.Hostname, err)
+				return
 			}
 
-			log.Printf("Retrieved %d operations for host %s", len(operations), h.Hostname)
+			log.Printf("[%s] Retrieved %d operations", h.Hostname, len(operations))
 
 			// Read SSH key only if configured
-			var key string
+			key := ""
 			if h.KeyName != "" {
 				key, err = m.SSHKey(h.KeyName)
 				if err != nil {
-					log.Printf("Error reading SSH key for host %v: %v", h.Hostname, err)
-					// TODO Handle failure indications for all operations
+					log.Printf("[%s] Error reading SSH key: %v", h.Hostname, err)
+					// Not returning here because we might still be able to log in with a password.
 				}
-			} else {
-				key = ""
 			}
 
+			// Execute operations
 			in := worker.ExecuteInput{
 				Hostname:   h.Hostname,
 				User:       h.User,
@@ -107,19 +107,21 @@ func main() {
 
 			client, err := m.SelectWorker()
 			if err != nil {
-				log.Fatalf("Could not select worker: %v", err)
+				log.Printf("[%s] Could not select worker: %v", h.Hostname, err)
+				return
 			}
 
 			// TODO Call RPC asynchronously?
 			err = client.Call("Worker.Execute", in, &out)
 			if err != nil {
-				log.Printf("Error executing operations: %v", err)
+				log.Printf("[%s] Error executing operations: %v", h.Hostname, err)
+				return
 			}
 
 			// Store results in DB
 			err = m.StoreResults(session, runID, h.Hostname, out.Results)
 			if err != nil {
-				log.Printf("Could not store results in DB: %v", err)
+				log.Printf("[%s] Could not store results in DB: %v", h.Hostname, err)
 			}
 
 			// Analyze results
@@ -134,29 +136,31 @@ func main() {
 
 			// TODO Set colors for success / fail
 			if len(good) > 0 {
-				log.Println("Completed operations:")
+				s := fmt.Sprintf("[%s] Completed operations:\n", h.Hostname)
 				for _, i := range good {
-					fmt.Println("* ", i.Operation.Description)
+					s = s + fmt.Sprintf("* %s\n", i.Operation.Description)
 					if i.StdOut != "" {
-						fmt.Printf("stdout:\n%v", formatScriptOutput(i.StdOut))
+						s = s + fmt.Sprintf("stdout:\n%v", formatScriptOutput(i.StdOut))
 					}
 					if i.StdErr != "" {
-						fmt.Printf("stderr:\n%v", formatScriptOutput(i.StdErr))
+						s = s + fmt.Sprintf("stderr:\n%v", formatScriptOutput(i.StdErr))
 					}
 				}
+				log.Print(s)
 			}
 
 			if len(bad) > 0 {
-				log.Println("Failed operations:")
+				s := fmt.Sprintf("[%s] Failed operations:\n", h.Hostname)
 				for _, i := range bad {
-					fmt.Println("* ", i.Operation.Description)
+					s = s + fmt.Sprintf("* %s\n", i.Operation.Description)
 					if i.StdOut != "" {
-						fmt.Printf("stdout:\n%v", formatScriptOutput(i.StdOut))
+						s = s + fmt.Sprintf("stdout:\n%v", formatScriptOutput(i.StdOut))
 					}
 					if i.StdErr != "" {
-						fmt.Printf("stderr:\n%v", formatScriptOutput(i.StdErr))
+						s = s + fmt.Sprintf("stderr:\n%v", formatScriptOutput(i.StdErr))
 					}
 				}
+				log.Print(s)
 			}
 		}()
 		wg.Wait()
