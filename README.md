@@ -153,6 +153,7 @@ scalable, stable and secure.
 - Use an encrypted transport protocol for master-worker communication.
 - Paging of results from the database.
 - Make master an always-on service and implement a client to submit runs, query their status etc.
+- Handle worker disconnections.
 
 [1]: https://golang.org/pkg/net/rpc/
 [2]: https://grpc.io/
