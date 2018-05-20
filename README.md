@@ -86,9 +86,9 @@ An sample module:
 This template expects `.text` and `.path` to be interpolated. The rendered script will then check
 if the file at `.path` contains the text `.text`, and if not - it will append the text to the file.
 
-NOTE: Operations need to be **idempotent**. That is - they don't need to perform anything if the
-relevant resource is already in the desired state. It is the responsibility of the operation's
-writer to ensure this is indeed the case.
+>NOTE: Operations need to be **idempotent**. That is - they don't need to perform anything if the
+>relevant resource is already in the desired state. It is the responsibility of the operation's
+>writer to ensure this is indeed the case.
 
 ### Data Model
 
