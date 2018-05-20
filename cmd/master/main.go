@@ -90,7 +90,7 @@ func main() {
 				key, err = m.SSHKey(h.KeyName)
 				if err != nil {
 					log.Printf("Error reading SSH key for host %v: %v", h.Hostname, err)
-					// TODO Handle failure indications for all operaions
+					// TODO Handle failure indications for all operations
 				}
 			} else {
 				key = ""
