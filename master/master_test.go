@@ -2,6 +2,7 @@ package master
 
 import (
 	"io/ioutil"
+	"log"
 	"net/rpc"
 	"os"
 	"testing"
@@ -55,7 +56,10 @@ func TestSelectWorker(t *testing.T) {
 			want = i + 1
 		}
 
-		c := m.SelectWorker()
+		c, err := m.SelectWorker()
+		if err != nil {
+			log.Fatalf("Error selecting worker: %v", err)
+		}
 		if c != m.Workers[want] {
 			t.Fatalf("Wrong worker selected: got %v want %v", &c, &m.Workers[want])
 		}
