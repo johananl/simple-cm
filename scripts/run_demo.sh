@@ -48,7 +48,7 @@ fi
 
 echo 'DB is ready'
 
-# See DB
+# Seed DB
 echo 'Seeding DB'
 docker-compose exec db1 cqlsh -e "SOURCE '/tmp/seed.cql'"
 
