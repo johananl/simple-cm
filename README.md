@@ -50,9 +50,10 @@ The *direction* of communication between the master and the workers is *master -
 of scalability it makes more sense to do it the other way around, that is - to make the workers
 "register" with the master and signal that they are ready for work. This is because this way the
 master doesn't need to know the network identities of all the workers, which makes the system's
-configuration simpler. **However**, unfortunately the [Go RPC library][1] currently does not
-support sending requests from the HTTP server to the HTTP client, and using an alternative such as
-gRPC was out of the question since it isn't a part of the standard library.
+configuration simpler and more suitable for running in containerized environments. **However**,
+unfortunately the [Go RPC library][1] currently does not support sending requests from the HTTP
+server to the HTTP client, and using an alternative such as gRPC was out of the question since it
+isn't a part of the standard library.
 
 The workers communicate with the remote hosts over **SSH**. SSH allows secure communication over
 unsecured networks, and in addition allows interacting with remote hosts easily using shell
