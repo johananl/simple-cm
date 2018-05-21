@@ -20,9 +20,9 @@ maintained by the Go community but is not part of the core standard library.
 
 The high-level design of the system takes an **agentless push mode** approach to configuration
 management. This means that configuration changes are sent **from the system to the hosts** without
-the need to run an agent on the hosts. A **pull mode** also exists, in which the hosts query the
-configuration management system periodically using an agent that runs on each host, then perform
-configuration changes locally as needed.
+the need to run an agent on the hosts. A **pull mode** also exists (but not implemented here), in
+which the hosts query the configuration management system periodically using an agent that runs on
+each host, then perform configuration changes locally as needed.
 
 ### Components
 
