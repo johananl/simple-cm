@@ -8,6 +8,7 @@ MAX_RETRIES=10
 SLEEP_INTERVAL=3
 
 cleanup () {
+    echo 'Cleaning up'
     docker-compose down
 }
 
