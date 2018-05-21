@@ -59,3 +59,7 @@ docker-compose up -d worker1 worker2 worker3
 # Run master
 echo 'Running master'
 docker-compose up master
+
+# Display results
+echo 'Run completed. Showing results:'
+docker-compose exec db1 cqlsh -e "select * from simplecm.results_by_run_id;"
