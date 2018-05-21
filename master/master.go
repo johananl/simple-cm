@@ -115,10 +115,10 @@ func (m *Master) SelectWorker() (*rpc.Client, error) {
 }
 
 // StoreRun stores a new run in the DB.
-func (m *Master) StoreRun(session *gocql.Session, id gocql.UUID) error {
+func (m *Master) StoreRun(session *gocql.Session, id gocql.UUID, ts time.Time) error {
 	log.Printf("Saving new run '%s' to DB", id.String())
 	q := `INSERT INTO runs (id, create_time) values (?, ?)`
-	if err := session.Query(q, id, time.Now()).Exec(); err != nil {
+	if err := session.Query(q, id, ts).Exec(); err != nil {
 		return fmt.Errorf("error storing run in DB: %v", err)
 	}
 	return nil

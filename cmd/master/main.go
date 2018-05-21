@@ -7,6 +7,7 @@ import (
 	"net/rpc"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gocql/gocql"
 
@@ -66,7 +67,7 @@ func main() {
 
 	// Store new run in DB
 	runID := gocql.TimeUUID()
-	err = m.StoreRun(session, runID)
+	err = m.StoreRun(session, runID, time.Now())
 	if err != nil {
 		log.Fatalf("Could not store run in DB: %v", err)
 	}
