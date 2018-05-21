@@ -123,6 +123,9 @@ To run unit tests only, run `make unittest`.
 
 >NOTE: Go is required for building the application from source. The solution was tested using
 >**Go 1.10.2**.
+>[dep][8] is used for dependency management.
+
+Run `dep ensure` to install the dependencies.
 
 To build the executables, run `make`.
 
@@ -177,3 +180,4 @@ scalable, stable and secure.
 [5]: https://github.com/gocql/gocql
 [6]: modules
 [7]: https://golang.org/pkg/text/template/
+[8]: https://github.com/golang/dep
