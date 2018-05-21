@@ -20,6 +20,10 @@ test:
 unittest:
 	go test -v ./...
 
+.PHONY: demo
+demo:
+	scripts/run_demo.sh
+
 .PHONY: clean
 clean:
 	rm -rf dist
