@@ -2,3 +2,4 @@ vendor
 .terraform
 terraform.tfstate*
 ssh_keys
+dist
