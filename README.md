@@ -66,6 +66,11 @@ host, it chooses a worker and sends *all* the operations for that host to the wo
 in turn executes all the operations serially and returns the results synchronously back to the
 master.
 
+It might be worth considering a different distribution model in which each operation is executed
+independently by the worker, instead of grouping the operations by host. This may improve the
+overall performance of the system. However, this may also introduce new problems with operations
+which may need to be executed *in a specific order* due to dependencies between them.
+
 ### Modules and Extensibility
 
 The system can run any operation that can be described using a shell script. This allows a lot of
