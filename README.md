@@ -35,7 +35,10 @@ It records the results received from the workers and stores them persistently in
 A worker receives commands, or "operations", from the master, executes them against the remote host
 and reports back the results.
 
-The system currently supports *one master* and an *arbitrary number of workers*.
+The system currently supports *one master* and an *arbitrary number of workers*. The master
+operates in a job-like fashion, that is - it executes all the work, stores the results then exits.
+Further work may be done to turn the master into a *service* and add a client which communicates
+with the master and serves as a UI.
 
 ### Communication
 
