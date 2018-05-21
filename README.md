@@ -127,7 +127,7 @@ To run unit tests only, run `make unittest`.
 
 Run `dep ensure` to install the dependencies.
 
-To build the executables, run `make`.
+To build the executables, run `make`. The executables will be created under `dist/`.
 
 To build only the master, run `make master`. To build only the worker, run `make worker`.
 
