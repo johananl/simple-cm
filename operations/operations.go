@@ -12,14 +12,16 @@ import (
 type Host struct {
 	Hostname string
 	User     string
-	// NOTE: Private SSH keys are transmitted from master to worker unencrypted over the network.
-	// This is highly unsecured and should not be used as-is in production. Possible solutions:
+	// NOTE: SSH credentials keys are transmitted from master to worker unencrypted over the
+	// network. This is highly unsecured and should not be used as-is in production. Possible
+	// solutions:
 	// - Encrypt the communication between master and worker.
 	// - Store the keys in a secure, reference the key name from master and have worker pull it.
 	KeyName  string
 	Password string
 }
 
+// Operation represents an operation to be performed on a remote host.
 type Operation struct {
 	Description string
 	ScriptName  string
