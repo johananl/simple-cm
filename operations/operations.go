@@ -13,7 +13,7 @@ type Host struct {
 	Hostname string
 	User     string
 	// NOTE: Private SSH keys are transmitted from master to worker unencrypted over the network.
-	// This is highly unsecure and should not be used as-is in production. Possible solutions:
+	// This is highly unsecured and should not be used as-is in production. Possible solutions:
 	// - Encrypt the communication between master and worker.
 	// - Store the keys in a secure, reference the key name from master and have worker pull it.
 	KeyName  string
